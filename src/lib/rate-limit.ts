@@ -1,6 +1,6 @@
 // Simple in-memory limiter: about 5 submissions per IP per 10 minutes.
 // Note: memory is per server instance, so on serverless hosting this is a
-// best-effort guard. Turnstile and the honeypot do the heavy lifting; move this
+// best-effort guard. The honeypot and the time check do the rest; move this
 // to a shared store (e.g. Upstash Redis) if abuse appears.
 const WINDOW_MS = 10 * 60 * 1000;
 const MAX_HITS = 5;

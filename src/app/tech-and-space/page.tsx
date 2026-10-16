@@ -94,13 +94,17 @@ export default function TechSpacePage() {
             <Reveal key={c.title} delay={i * 0.08} className="h-full">
               <Card className="h-full">
                 <div className="relative -mx-6 -mt-6 mb-6 aspect-[16/10]">
-                  <Image
-                    src={c.image.src}
-                    alt={c.image.alt}
-                    fill
-                    sizes="(min-width: 1024px) 560px, 100vw"
-                    className="object-cover"
-                  />
+                  {c.image.soon ? (
+                    <PhotoComingSoon label={homeMedia.techSpace.comingSoon} ariaLabel={c.image.alt} />
+                  ) : (
+                    <Image
+                      src={c.image.src}
+                      alt={c.image.alt}
+                      fill
+                      sizes="(min-width: 1024px) 560px, 100vw"
+                      className="object-cover"
+                    />
+                  )}
                 </div>
                 <h3>{c.title}</h3>
                 <p className="mt-3 opacity-85">{c.text}</p>

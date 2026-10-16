@@ -9,3 +9,6 @@ next-env.d.ts
 
 # Heavy original photos and videos: never commit
 incoming-photos/
+
+# Photos held back from the site until the owner approves them
+held-photos/

@@ -45,7 +45,6 @@ Many of the people we support are young. If you are under 18, please make sure a
 ## Who receives your information
 We use trusted services to run this website and handle your requests:
 - Hosting and delivery of the website (Vercel).
-- Spam protection on forms (Cloudflare Turnstile).
 - Sending your request to our team by email (Resend), received in a Google Gmail inbox that our authorised team members can access.
 
 These providers process information for us and may store it outside Nigeria. We only use them to operate the website and receive requests, and we expect them to protect your information. We will share information with authorities only where the law requires it or to protect someone from harm.
@@ -57,7 +56,6 @@ We keep a request for up to 12 months after we have dealt with it, then delete i
 This website uses only what it needs to work:
 - A small stored setting that remembers your light or dark display choice.
 - A small stored setting that remembers if you closed an announcement bar.
-- Cloudflare Turnstile, which checks that a form is being filled in by a person.
 
 We do not use advertising or tracking cookies. If we add website analytics in future, we will update this policy and ask for your consent where the law requires it.
 

@@ -17,6 +17,7 @@ import {
   media,
   meta,
   moments,
+  SHOW_MOMENTS_GALLERY,
   whatToExpect,
   whoShouldCome,
 } from "@/content/events";
@@ -132,30 +133,32 @@ export default function EventsPage() {
         </Reveal>
       </Section>
 
-      <Section tone="white">
-        <Reveal>
-          <SectionHeading>{moments.heading}</SectionHeading>
-        </Reveal>
-        <ul className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4 lg:gap-5">
-          {moments.items.map((img) => (
-            <li key={img.src}>
-              <Card className="!p-0">
-                <div className="aspect-[4/3] w-full">
-                  <Image
-                    src={img.src}
-                    alt={img.alt}
-                    width={moments.width}
-                    height={moments.height}
-                    loading="lazy"
-                    sizes="(min-width: 1280px) 280px, (min-width: 1024px) 22vw, 50vw"
-                    className="h-full w-full object-cover"
-                  />
-                </div>
-              </Card>
-            </li>
-          ))}
-        </ul>
-      </Section>
+      {SHOW_MOMENTS_GALLERY && (
+        <Section tone="white">
+          <Reveal>
+            <SectionHeading>{moments.heading}</SectionHeading>
+          </Reveal>
+          <ul className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4 lg:gap-5">
+            {moments.items.map((img) => (
+              <li key={img.src}>
+                <Card className="!p-0">
+                  <div className="aspect-[4/3] w-full">
+                    <Image
+                      src={img.src}
+                      alt={img.alt}
+                      width={moments.width}
+                      height={moments.height}
+                      loading="lazy"
+                      sizes="(min-width: 1280px) 280px, (min-width: 1024px) 22vw, 50vw"
+                      className="h-full w-full object-cover"
+                    />
+                  </div>
+                </Card>
+              </li>
+            ))}
+          </ul>
+        </Section>
+      )}
 
       <ClosingSection heading={closing.heading} cta={closing.cta} />
     </>

@@ -6,8 +6,7 @@ import { forms } from "@/content/techspace";
 import type { FormType } from "@/lib/form-types";
 import { cn } from "@/lib/cn";
 
-// The form code (and its Turnstile security check) is only downloaded once a
-// visitor opens a form.
+// The form code is only downloaded once a visitor opens a form.
 const RequestForm = dynamic(() => import("./RequestForm").then((m) => m.RequestForm), {
   ssr: false,
   loading: () => <div className="min-h-[12rem]" aria-hidden="true" />,

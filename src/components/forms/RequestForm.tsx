@@ -1,19 +1,18 @@
 "use client";
 
-import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { forms, formsCommon } from "@/content/techspace";
 import type { FieldDef, FormType } from "@/lib/form-types";
 import { validateForm } from "@/lib/forms";
 import Link from "next/link";
-import { Turnstile } from "./Turnstile";
 import { WhatsAppButton } from "./WhatsAppButton";
 
-// If no token arrives within this long, assume the security check is blocked.
-const CHECK_TIMEOUT_MS = 8000;
+// If the server has not answered after this long, stop waiting and show an error.
+const REQUEST_TIMEOUT_MS = 10000;
 
 type Status = "idle" | "sending" | "done";
-// "verify" and "widget" errors clear themselves when a fresh token arrives.
-type FormError = { kind: "verify" | "widget" | "email" | "other"; message: string };
+// "retry" errors show the Try again and WhatsApp buttons; "fields" errors point at the form.
+type FormError = { kind: "retry" | "fields"; message: string };
 
 const inputClass =
   "min-h-12 w-full rounded-xl border border-slate-navy/25 bg-white px-4 py-3 text-slate-navy placeholder:text-slate-navy/50 dark:border-white/25 dark:bg-dark-bg dark:text-dark-text dark:placeholder:text-dark-text/50 aria-[invalid=true]:border-accent-red dark:aria-[invalid=true]:border-accent-red aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-accent-red/40";
@@ -24,82 +23,21 @@ export function RequestForm({
   type,
   defaults = {},
   onClose,
-  lazyCheck = false,
 }: {
   type: FormType;
   defaults?: Record<string, string>;
   onClose: () => void;
-  // Start the Turnstile check only when the form is near the screen or used.
-  lazyCheck?: boolean;
 }) {
   const def = forms[type];
   const uid = useId();
   const [values, setValues] = useState<Record<string, string>>(defaults);
   const [consent, setConsent] = useState(false);
-  const [token, setToken] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<FormError | null>(null);
-  const [resetSignal, setResetSignal] = useState(0);
-  const [blocked, setBlocked] = useState(false);
-  const [attempt, setAttempt] = useState(0);
-  const [checkStarted, setCheckStarted] = useState(!lazyCheck);
   const formRef = useRef<HTMLFormElement>(null);
+  // When the form opened, so the server can ignore instant (bot) submissions.
+  const openedAt = useRef(Date.now());
   const [status, setStatus] = useState<Status>("idle");
-  const onToken = useCallback((t: string) => {
-    setToken(t);
-    // The widget succeeded: drop any stale security-check message.
-    setFormError((e) => (e && (e.kind === "verify" || e.kind === "widget") ? null : e));
-  }, []);
-  // Token expired, widget errored or script failed: reset and ask to retry.
-  const onProblem = useCallback(() => {
-    setToken("");
-    setResetSignal((n) => n + 1);
-    setFormError({ kind: "widget", message: formsCommon.verifyRetry });
-  }, []);
-  // The Turnstile script could not load at all (ad blocker, antivirus shield).
-  const onBlocked = useCallback(() => setBlocked(true), []);
-  // Lazy mode: begin the security check once the form is near the screen.
-  useEffect(() => {
-    if (checkStarted) return;
-    const el = formRef.current;
-    if (!el || typeof IntersectionObserver === "undefined") {
-      setCheckStarted(true);
-      return;
-    }
-    const io = new IntersectionObserver(
-      (entries) => {
-        if (entries.some((e) => e.isIntersecting)) {
-          setCheckStarted(true);
-          io.disconnect();
-        }
-      },
-      { rootMargin: "200px" },
-    );
-    io.observe(el);
-    return () => io.disconnect();
-  }, [checkStarted]);
-  // No token yet after a while: show the fallback. A late token cancels it.
-  useEffect(() => {
-    if (!checkStarted) return;
-    if (token) {
-      setBlocked(false);
-      return;
-    }
-    const id = setTimeout(() => setBlocked(true), CHECK_TIMEOUT_MS);
-    return () => clearTimeout(id);
-  }, [token, attempt, resetSignal, checkStarted]);
-  // "Try again": reload the widget (and script) without touching typed answers.
-  function tryAgain() {
-    setBlocked(false);
-    setToken("");
-    setFormError((e) => (e && (e.kind === "verify" || e.kind === "widget") ? null : e));
-    setAttempt((n) => n + 1);
-  }
-  // Tokens are single-use: after any attempt that reached the server, get a new one.
-  function refreshToken() {
-    setToken("");
-    setResetSignal((n) => n + 1);
-  }
 
   function set(name: string, value: string) {
     setValues((v) => ({ ...v, [name]: value }));
@@ -113,9 +51,10 @@ export function RequestForm({
     });
   }
 
-  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const form = e.currentTarget;
+  async function onSubmit(e?: React.FormEvent<HTMLFormElement>) {
+    e?.preventDefault();
+    const form = formRef.current;
+    if (!form || status === "sending") return;
     setFormError(null);
     const check = validateForm(type, { ...values, consent });
     if (!check.ok) {
@@ -123,18 +62,22 @@ export function RequestForm({
       focusFirstInvalid(form);
       return;
     }
-    if (!token) {
-      setFormError({ kind: "verify", message: formsCommon.verifyError });
-      return;
-    }
     setErrors({});
     setStatus("sending");
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
     try {
       const honeypot = (form.elements.namedItem("website") as HTMLInputElement)?.value;
       const res = await fetch(`/api/forms/${type}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...values, consent, website: honeypot, turnstileToken: token }),
+        signal: controller.signal,
+        body: JSON.stringify({
+          ...values,
+          consent,
+          website: honeypot,
+          elapsedMs: Date.now() - openedAt.current,
+        }),
       });
       const data = (await res.json().catch(() => ({}))) as {
         error?: string;
@@ -145,29 +88,24 @@ export function RequestForm({
         setStatus("done");
         return;
       }
-      // Failed: keep everything the visitor typed, show why, get a fresh token.
+      // Failed: keep everything the visitor typed and show why.
       if (data.fieldErrors) {
         setErrors(data.fieldErrors);
         focusFirstInvalid(form);
-      }
-      if (data.code === "email_failed") {
-        setFormError({ kind: "email", message: formsCommon.emailFailed });
-      } else if (data.code === "verify_failed") {
-        // The server explains why (e.g. the check was already used).
-        setFormError({ kind: "verify", message: data.error ?? formsCommon.verifyRetry });
-      } else if (data.fieldErrors) {
-        setFormError({ kind: "other", message: formsCommon.fixFields });
+        setFormError({ kind: "fields", message: formsCommon.fixFields });
       } else {
         setFormError({
-          kind: "other",
+          kind: "retry",
           // Only server messages that came with a code are visitor-friendly.
           message: data.code && data.error ? data.error : formsCommon.genericError,
         });
       }
-    } catch {
-      setFormError({ kind: "other", message: formsCommon.genericError });
+    } catch (err) {
+      const timedOut = err instanceof DOMException && err.name === "AbortError";
+      setFormError({ kind: "retry", message: timedOut ? formsCommon.timeout : formsCommon.genericError });
+    } finally {
+      clearTimeout(timer);
     }
-    refreshToken();
     setStatus("idle");
   }
 
@@ -191,7 +129,6 @@ export function RequestForm({
     <form
       ref={formRef}
       onSubmit={onSubmit}
-      onFocusCapture={() => setCheckStarted(true)}
       noValidate
       className="space-y-5"
     >
@@ -243,38 +180,19 @@ export function RequestForm({
       </div>
       )}
 
-      {checkStarted && (
-      <Turnstile
-        key={attempt}
-        onToken={onToken}
-        onProblem={onProblem}
-        onBlocked={onBlocked}
-        resetSignal={resetSignal}
-      />
-      )}
-
-      {blocked && !token && (
-        <div role="alert" className="rounded-xl bg-accent-red/10 p-3 text-sm font-medium text-accent-red dark:text-red-300">
-          <p>{formsCommon.securityBlocked}</p>
-          <div className="mt-3 flex flex-wrap items-center gap-3">
-            <WhatsAppButton />
-            <button
-              type="button"
-              onClick={tryAgain}
-              className="inline-flex min-h-11 items-center justify-center rounded-full border-2 border-current px-5 text-sm font-semibold hover:bg-accent-red/10"
-            >
-              {formsCommon.tryAgain}
-            </button>
-          </div>
-        </div>
-      )}
-
       {formError && (
         <div role="alert" className="rounded-xl bg-accent-red/10 p-3 text-sm font-medium text-accent-red dark:text-red-300">
           <p>{formError.message}</p>
-          {formError.kind === "email" && (
-            <div className="mt-3">
+          {formError.kind === "retry" && (
+            <div className="mt-3 flex flex-wrap items-center gap-3">
               <WhatsAppButton />
+              <button
+                type="button"
+                onClick={() => onSubmit()}
+                className="inline-flex min-h-11 items-center justify-center rounded-full border-2 border-current px-5 text-sm font-semibold hover:bg-accent-red/10"
+              >
+                {formsCommon.tryAgain}
+              </button>
             </div>
           )}
         </div>
@@ -282,10 +200,10 @@ export function RequestForm({
 
       <button
         type="submit"
-        disabled={status === "sending" || !token}
+        disabled={status === "sending"}
         className="min-h-12 w-full rounded-full bg-amber px-7 py-3 font-heading text-base text-slate-navy transition hover:brightness-95 disabled:opacity-60"
       >
-        {status === "sending" ? formsCommon.sending : !token ? formsCommon.checking : def.submitLabel}
+        {status === "sending" ? formsCommon.sending : def.submitLabel}
       </button>
 
       <p className="flex flex-wrap items-center gap-x-1 text-sm opacity-80">

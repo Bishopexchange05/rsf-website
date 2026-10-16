@@ -36,6 +36,9 @@ export const hero = {
   text: `Join us as we open ${spaceName}, a place for young people to work, learn and be guided.`,
 };
 
+// Set to true to show the "Moments from RSF" gallery on the Events page again.
+export const SHOW_MOMENTS_GALLERY = false;
+
 // "Moments from RSF" photo gallery. Images are 800x600 (4:3), so there is no layout shift.
 export const moments = {
   heading: "Moments from RSF",

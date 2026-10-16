@@ -2,11 +2,11 @@ import { LeafDivider } from "@/components/LeafDivider";
 
 // Branded stand-in for a photo that has not been supplied yet. Fills its parent
 // (which must be `relative` with a fixed aspect ratio).
-export function PhotoComingSoon({ label }: { label: string }) {
+export function PhotoComingSoon({ label, ariaLabel }: { label: string; ariaLabel?: string }) {
   return (
     <div
       role="img"
-      aria-label={label}
+      aria-label={ariaLabel ?? label}
       className="absolute inset-0 grid place-items-center bg-gradient-to-br from-navy to-purple p-4 text-center text-white dark:from-dark-bg dark:to-purple-panel"
     >
       <div>

@@ -9,12 +9,15 @@ import { partnerForm, volunteerForm } from "./get-involved";
 export const media = {
   hero: { src: "/media/hero-poster.jpg", alt: "" }, // decorative background
   day: {
-    src: "/media/techspace-01.jpg",
-    alt: "Two young men in the day workspace beside a barred window with a pink curtain: one stands with a hand on his chin, looking up, while the other sits in front of him.",
-  },
-  overnight: {
     src: "/media/techspace-02.jpg",
     alt: "An empty, well-lit workspace with orange and green desk booths, wooden tables and a projector screen under a colourful ceiling.",
+    soon: false,
+  },
+  overnight: {
+    // No overnight photo anywhere on the site: that location stays private.
+    src: "",
+    alt: "Overnight workspace photo coming soon",
+    soon: true,
   },
   mediaRoom: {
     src: "/media/techspace-03.jpg",
@@ -173,15 +176,9 @@ export const formsCommon = {
   close: "Close",
   genericError: "Something went wrong. Please try again in a moment.",
   rateLimited: "Too many requests from this connection. Please wait a few minutes and try again.",
-  verifyError: "Please complete the security check and try again.",
-  verifyUnreachable: "We couldn't reach the security service. Please check your connection and try again.",
   fixFields: "Please check the highlighted fields.",
-  verifyUsed: "That security check was already used. Please wait a moment for a fresh one, then send again.",
-  verifyRetry: "The security check expired or did not load. Please try again.",
-  checking: "Checking you're human…",
+  timeout: "This is taking longer than expected. Please try again, or chat with us on WhatsApp.",
   emailFailed: "We couldn't send your request. Please try again, or chat with us on WhatsApp.",
-  securityBlocked:
-    "The security check couldn't load. Turn off your ad blocker or antivirus web shield for this page and try again, or chat with us on WhatsApp.",
   tryAgain: "Try again",
   privacyLead: "We use your details only to reply to you.",
   privacySee: "See our",

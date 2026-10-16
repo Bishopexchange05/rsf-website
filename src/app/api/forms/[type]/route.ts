@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import { forms, formsCommon } from "@/content/techspace";
 import { isFormType, validateForm } from "@/lib/forms";
 import { clientIp, rateLimited } from "@/lib/rate-limit";
-import { verifyTurnstile } from "@/lib/turnstile";
 
+const MIN_FILL_MS = 2000;
 const isDev = process.env.NODE_ENV !== "production";
 
 // Say exactly why a request was rejected, in the server console only (never
@@ -49,23 +49,11 @@ export async function POST(
     return NextResponse.json({ ok: true });
   }
 
-  const token = typeof body.turnstileToken === "string" ? body.turnstileToken : "";
-  const check = await verifyTurnstile(token, ip);
-  if (check.status === "not-configured") {
-    logReject(type, 503, "Turnstile secret key is not set (production)");
-    return NextResponse.json({ error: formsCommon.notConfigured, code: "not_configured" }, { status: 503 });
-  }
-  if (check.status === "failed") {
-    logReject(type, 400, `Turnstile verification failed (Cloudflare codes: ${check.codes.join(", ") || "none"}${check.detail ? `; ${check.detail}` : ""})`);
-    const used = check.codes.includes("timeout-or-duplicate");
-    const unreachable = check.codes.includes("network-error");
-    return NextResponse.json(
-      {
-        error: used ? formsCommon.verifyUsed : unreachable ? formsCommon.verifyUnreachable : formsCommon.verifyRetry,
-        code: "verify_failed",
-      },
-      { status: 400 },
-    );
+  // Time check: a form cannot be filled in and sent in under 2 seconds. A missing
+  // or too-small value means a script posted it directly. Pretend success.
+  if (typeof body.elapsedMs !== "number" || body.elapsedMs < MIN_FILL_MS) {
+    logReject(type, 200, "submitted too quickly or without a timer (silently dropped)");
+    return NextResponse.json({ ok: true });
   }
 
   const result = validateForm(type, body);
@@ -118,7 +106,8 @@ export async function POST(
       console.log(`[forms] ${type}: email accepted by Resend (id ${sent.id ?? "unknown"})`);
     }
   } catch (err) {
-    console.error("[forms] email failed:", err instanceof Error ? err.message : String(err));
+    const cause = err instanceof Error && err.cause instanceof Error ? ` (${err.cause.message})` : "";
+    console.error("[forms] email failed:", err instanceof Error ? err.message : String(err), cause);
     return NextResponse.json({ error: formsCommon.genericError, code: "email_failed" }, { status: 502 });
   }
 

@@ -49,7 +49,7 @@ export const media = {
     fullscreenLabel: "Full screen",
     comingSoon: "Photo coming soon",
     gallery: [
-      { src: "/media/techspace-01.jpg", alt: "Two young men in the day workspace beside a barred window with a pink curtain: one stands with a hand on his chin, looking up, while the other sits in front of him.", soon: false },
+      { src: "/media/techspace-coworking.jpg", alt: "A meeting room with a long wooden table, black mesh office chairs and a desktop computer at the far end, in front of pink curtains and a marble-effect wall.", soon: false },
       { src: "/media/techspace-02.jpg", alt: "An empty, well-lit workspace with orange and green desk booths, wooden tables and a projector screen under a colourful ceiling.", soon: false },
       { src: "/media/techspace-03.jpg", alt: "Placeholder photo: the media room with recording equipment.", soon: true },
       { src: "/media/techspace-04.jpg", alt: "Learners sit at wooden desks in the training room, some with laptops and phones, looking towards the camera.", soon: false },

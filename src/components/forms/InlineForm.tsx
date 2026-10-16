@@ -8,5 +8,5 @@ import { RequestForm } from "./RequestForm";
 // send, "Close" gives the visitor a fresh, empty form.
 export function InlineForm({ type }: { type: FormType }) {
   const [round, setRound] = useState(0);
-  return <RequestForm key={round} type={type} lazyCheck onClose={() => setRound((n) => n + 1)} />;
+  return <RequestForm key={round} type={type} onClose={() => setRound((n) => n + 1)} />;
 }

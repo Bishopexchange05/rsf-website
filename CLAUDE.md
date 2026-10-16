@@ -114,7 +114,7 @@ hardcode a dark-mode color inline; reference the token.
 - Footer: 4 columns (About, Services, Contact incl. WhatsApp link, Legal); legal
   pages: Privacy, Terms, Safeguarding/Child Protection, NDPR statement;
   copyright "© 2026 Rafael Support Foundation. All Rights Reserved."
-- Public forms get Cloudflare Turnstile and input validation/sanitization
+- Public forms use no CAPTCHA. Protection is a honeypot field, a 2-second time check, a rate limit (5 per IP per 10 minutes) and server-side validation/sanitization
 
 ## Workflow
 - Build one page or feature at a time; stay in scope of the request

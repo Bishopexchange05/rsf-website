@@ -90,7 +90,6 @@ export const privacy: LegalPageData = {
     p("We use trusted services to run this website and handle your requests:"),
     ul(
       "Hosting and delivery of the website (Vercel).",
-      "Spam protection on forms (Cloudflare Turnstile).",
       "Sending your request to our team by email (Resend), received in a Google Gmail inbox that our authorised team members can access.",
     ),
     p(
@@ -105,7 +104,6 @@ export const privacy: LegalPageData = {
     ul(
       "A small stored setting that remembers your light or dark display choice.",
       "A small stored setting that remembers if you closed an announcement bar.",
-      "Cloudflare Turnstile, which checks that a form is being filled in by a person.",
     ),
     p(
       "We do not use advertising or tracking cookies. If we add website analytics in future, we will update this policy and ask for your consent where the law requires it.",
