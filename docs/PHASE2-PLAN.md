@@ -255,7 +255,7 @@ Create a new Google account used only for sending (not anyone's personal inbox),
 
 Honest limits **[FROM MEMORY: VERIFY each against Google's current Gmail and Workspace documentation]**:
 - **Daily cap:** about 500 recipients per rolling 24 hours for a free Gmail account over SMTP (about 2,000 for Google Workspace). Going over can pause sending for up to about a day. Our expected volume (a few hundred emails a day at most) fits, but the cap is shared by verification, reset and booking emails.
-- **Sender address:** Gmail sends as the authenticated account (for example `something@gmail.com`). The display name can say "Rafael Support Foundation", and Reply-To can be set to the real info@ address. It cannot be `@rafaelsupportfoundation.org` until the domain route exists.
+- **Sender address:** Gmail sends as the authenticated account (a gmail.com address). The display name says "Rafael Support Foundation", and Reply-To is set separately through the `REPLY_TO_EMAIL` setting (3A.7). It cannot be `@rafaelsupportfoundation.org` until the domain route exists.
 - **Spam-folder risk:** mail sent through Google's own servers passes SPF, DKIM and DMARC for gmail.com, so it usually reaches Gmail inboxes, which most Nigerian users have. It is more likely to land in spam with Yahoo and Outlook, with a brand-new account, with bursts of identical emails, and when the message links to a different domain than the sender. It also looks less official, and a sender that is a gmail.com address is less trusted by careful users.
 - **Account risk:** Google can suspend an account that sends automated bulk-looking mail. That would stop all sending at once. Mitigations: low volume, plain transactional wording, a recovery phone and email on the account, and a monitor (3A.5).
 - **App passwords** require 2-Step Verification and are not offered on some account types (for example Advanced Protection or accounts whose Workspace administrator disabled them).
@@ -285,7 +285,7 @@ Honest limits **[FROM MEMORY: VERIFY each against Google's current Gmail and Wor
 Why: it is free, can be working the same day, handles our volume, keeps verification by email (which also protects password resets), adds no SMS cost, no sender-ID registration, and no new personal-data processor beyond Google, which carries the same emails anyway. SMS is better kept as a possible later addition for the overnight service, not the sign-up gate. C1 replaces A if you still have the info@ mailbox login (more official sender). C2 is the upgrade if the Gmail deliverability test in M1 fails or volume grows. C3 is added regardless.
 
 **How to make switching a configuration change (no code later):**
-- All app emails go through one server function, `sendEmail()`, that reads environment variables: `EMAIL_PROVIDER` (`smtp` or `resend`), `EMAIL_FROM` (display name and address), `EMAIL_REPLY_TO`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, and the existing `RESEND_API_KEY`. The existing `FORMS_FROM_EMAIL` stays as the Phase 1 forms sender and is not touched.
+- All app emails go through one server function, `sendEmail()`, that reads environment variables: `EMAIL_PROVIDER` (`smtp` or `resend`), `EMAIL_FROM` (display name and address), `REPLY_TO_EMAIL`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, and the existing `RESEND_API_KEY`. The existing `FORMS_FROM_EMAIL` stays as the Phase 1 forms sender and is not touched.
 - Supabase's verification and reset emails use the SMTP fields in the Supabase dashboard (Auth settings). Switching means changing those fields; no deploy.
 - **Switch-over checklist (about 30 minutes, whenever the domain is verified):** verify the domain in Resend; set `EMAIL_PROVIDER=resend` and `EMAIL_FROM=info@rafaelsupportfoundation.org` in Vercel; replace the SMTP fields in the Supabase dashboard with Resend's SMTP details; send a test verification, reset and booking email; retire the Gmail account.
 - A small `nodemailer` dependency is needed for SMTP (to be installed only when M1 is approved).
@@ -300,6 +300,25 @@ Staff confirm every booking only after seeing the money in the bank account, so 
 4. **Desk hoarding with throwaway accounts:** limited by the 2-hour hold, the 3-unpaid-bookings cap and rate limits, and by staff only confirming paid bookings.
 5. **Student-free abuse:** the real check is the in-person student ID.
 **Conclusion: the recommendation does not change.** Keep email verification required (Option A makes it affordable). The `require_verified_email` setting exists as an emergency fallback only: if Gmail is suspended or hits its cap, an Admin can switch it off and bookings continue, with staff confirming by phone or WhatsApp before approving, and password reset temporarily disabled for unverified accounts. Overnight always needs the in-person visit regardless.
+
+### 3A.7 Sender, Reply-To and inboxes (decided by the owner)
+No email address or password is written in this file or in any committed file. Addresses live only in `.env.local` and Vercel environment variables (and in the Supabase SMTP settings for auth emails).
+
+| Role | Where it is set | Notes |
+|---|---|---|
+| **Sender** (the Gmail account that sends, display name "Rafael Support Foundation") | `SMTP_USER` and `EMAIL_FROM` in env; Supabase Auth SMTP settings | Gmail SMTP with an app password. `info@rafaelsupportfoundation.org` is **not** used for now |
+| **App password** | `SMTP_PASS` in env; Supabase Auth SMTP password field | Known only to the owner. Never in chat, git, logs or docs |
+| **Reply-To** (the requests inbox) | `REPLY_TO_EMAIL` in env | Changing it later (for example to info@) is an environment change in Vercel, no code or redeploy of logic |
+| **Form submissions** (Phase 1 forms) | `FORMS_TO_EMAIL` (unchanged) | Keep going to the requests inbox exactly as today |
+
+**Which emails carry the Reply-To**
+- **The app's own emails** (booking created, "I've paid" received, confirmed, rejected, reminders): our `sendEmail()` sets the Reply-To header from `REPLY_TO_EMAIL` on every message. Tested in M1 with a test email.
+- **Supabase auth emails (verify email, reset password): probably cannot carry a Reply-To.** I checked Supabase's custom SMTP documentation: it lists host, port, user, password, sender address and sender name, and mentions no Reply-To field or setting. The official page does not state it either way for the dashboard form, so **the owner should look at the SMTP form in the Supabase dashboard**: if there is no Reply-To box, the answer is no. [Dashboard layout may differ from the documentation; verify on screen.]
+- **What a customer would see if it cannot:** they get the verification or reset email from "Rafael Support Foundation" at the sender Gmail address. If they press Reply, the reply goes to that sender inbox, not the requests inbox. **Does it matter?** Little, because these are automated, one-click messages and people rarely reply to them. The risk is a worried customer replying "I can't get in" to an inbox nobody reads.
+- **Mitigations (any combination, no code needed):**
+  1. In the Supabase email templates, end with a line such as "This is an automated message. Need help? Contact us at the Contact page on our website or on WhatsApp", with a link to the website's contact page and the WhatsApp number (no email address needed in the text). Template text is pasted into the Supabase dashboard; the repo copy uses a placeholder for any address.
+  2. In the **sender** Gmail account, set up **forwarding** of incoming mail to the requests inbox (Gmail Settings, Forwarding; Google asks the requests inbox to confirm). Replies to verification emails then reach the team.
+  3. Optionally turn on a short **auto-reply** (vacation responder) in the sender account pointing people to the Contact page.
 
 ---
 
@@ -523,15 +542,15 @@ Each milestone is built on `phase-2`, tested on a Vercel preview deployment of t
 
 **Accounts and setup (you, not me):**
 1. A **Supabase** account and two projects (development, production later). Share only the project URL and anon key through Vercel env vars; **never paste the service-role key or any app password into chat**.
-2. A **dedicated Gmail account** for sending (suggested display name "Rafael Support Foundation"; pick the address). Turn on 2-Step Verification, add a recovery phone and email you control, and create an **app password**. You enter that app password yourself in Supabase (Auth, SMTP) and in Vercel (`SMTP_PASS`). Tell me when it is ready, never the password itself.
-3. **Answer: do you still have a login for any mailbox on rafaelsupportfoundation.org (for example info@ hosted by GoDaddy)?** If yes, option C1 gives a more official sender than Gmail and may replace it.
+2. **Done:** the dedicated sender Gmail account exists with 2-Step Verification, display name "Rafael Support Foundation", recovery phone and email, and an app password. The app password goes only into Supabase (Auth, SMTP settings) and into `.env.local` / Vercel as `SMTP_PASS`; you type it yourself, never in chat. Optional: in that account, forward incoming mail to the requests inbox (3A.7).
+3. **Decided:** `info@rafaelsupportfoundation.org` is not used for now. Reply-To is the requests inbox, set by `REPLY_TO_EMAIL`. Changing Reply-To to info@ later is an environment change.
 4. Optional: decide whether to **buy a small separate domain for email** (option C2) if Gmail testing in M1 shows poor deliverability.
 5. Confirm your **Vercel** plan (Hobby vs Pro) given payments are involved.
 6. **Resend domain (deferred, about two months):** when GoDaddy DNS access is back, add Resend's DNS records and create `info@`. Until then Resend stays as it is for the Phase 1 forms (which only email you). The switch-over steps are in 3A.5.
 7. The **admin email** that will be the first Admin, and an inbox for admin notifications (can reuse `FORMS_TO_EMAIL`).
 8. Decide the **monthly desk cap** (how many of the 30 desks passes may hold) and an **admin WhatsApp number** for click-to-chat (already stored for the site WhatsApp link).
 
-**Environment variables to add in Vercel (later, by you):** `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` (server only), `EMAIL_PROVIDER` (`smtp` now, `resend` later), `EMAIL_FROM`, `EMAIL_REPLY_TO`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` (server only), `EMAIL_DAILY_CAP`, `NEXT_PUBLIC_ACCOUNTS_ENABLED`. Production and Preview get different Supabase values. Existing `RESEND_API_KEY`, `FORMS_TO_EMAIL`, `FORMS_FROM_EMAIL` keep their current role.
+**Environment variables to add in Vercel (later, by you):** `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` (server only), `EMAIL_PROVIDER` (`smtp` now, `resend` later), `EMAIL_FROM`, `REPLY_TO_EMAIL`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` (server only), `EMAIL_DAILY_CAP`, `NEXT_PUBLIC_ACCOUNTS_ENABLED`. Production and Preview get different Supabase values. Existing `RESEND_API_KEY`, `FORMS_TO_EMAIL` (form submissions keep going to the requests inbox), `FORMS_FROM_EMAIL` keep their current role. Locally, the same values go in `.env.local` (git-ignored).
 
 **Decisions needed** (recommended defaults in brackets, so you can answer "default" to any):
 - Q1. Decided: opening 8:00 AM, closing 6:00 PM, **open Monday to Saturday, closed Sunday** (all editable in admin).
@@ -547,7 +566,7 @@ Each milestone is built on `phase-2`, tested on a Vercel preview deployment of t
 - Q11. Wording for the **Terms of use** of booking (no-shows, behaviour, liability); I will draft, your lawyer should review.
 - Q12. Decided: monthly pass = 30 consecutive calendar days from the start date (Sundays and other closed days still count, and the website must say so clearly). Pass desk cap = 10 of 30, editable by Admin. Free-for-students never applies to the monthly pass (default, not contradicted).
 - Q13. **Overnight monthly price:** offer a monthly bed at all? (default: not at launch; leave the price blank and it stays hidden).
-- Q14. Decided: the main sender is the dedicated Gmail account (address kept out of this file, set in environment variables; 2-Step Verification on, app password), because the owner controls it. The info@rafaelsupportfoundation.org mailbox (option C1) is an optional test only, not the main sender.
+- Q14. Decided: the main sender is a dedicated Gmail account (address only in environment variables) with display name "Rafael Support Foundation", over Gmail SMTP with an app password. Reply-To is the requests inbox via `REPLY_TO_EMAIL`. The info@rafaelsupportfoundation.org mailbox is not used for now. Form submissions keep going to the requests inbox via `FORMS_TO_EMAIL`.
 
 Out of scope for this plan (listed in CLAUDE.md as Phase 2 but later): courses/LMS, quizzes and certificates, consulting payments, SMS. They reuse the same accounts and admin area, so nothing here blocks them. SMS one-time codes (option B) are not part of this plan.
 
@@ -560,7 +579,7 @@ Out of scope for this plan (listed in CLAUDE.md as Phase 2 but later): courses/L
 ## 9. Owner decisions log
 
 - Plan approved; M1 may start. M2 must not start until approved separately.
-- Sender: the dedicated Gmail account (address set in environment variables, not written here; 2-Step Verification, app password), main sender for the Gmail bridge. info@rafaelsupportfoundation.org is an optional test only.
+- Sender: a dedicated Gmail account (address only in environment variables, never in committed files), display name "Rafael Support Foundation", Gmail SMTP with an app password. Reply-To: the requests inbox, set by `REPLY_TO_EMAIL`. info@rafaelsupportfoundation.org is not used for now. Form submissions keep going to the requests inbox.
 - Monthly pass: 30 calendar days, stated clearly on the website. Desk cap 10 of 30, editable by Admin.
 - Opening hours default: 8:00 AM to 6:00 PM, Monday to Saturday, closed Sunday (editable by Admin).
 - The phase-2 branch is pushed to origin (phase-2 only, never main).
