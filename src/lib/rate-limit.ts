@@ -7,9 +7,16 @@ const MAX_HITS = 5;
 
 const hits = new Map<string, number[]>();
 
-export function rateLimited(key: string, now = Date.now()): boolean {
-  const recent = (hits.get(key) ?? []).filter((t) => now - t < WINDOW_MS);
-  if (recent.length >= MAX_HITS) {
+// Same limiter with its own allowance, used by the account actions
+// (for example 1 resend per minute, 8 login tries per 10 minutes).
+export function rateLimitedWith(
+  key: string,
+  max: number,
+  windowMs: number,
+  now = Date.now(),
+): boolean {
+  const recent = (hits.get(key) ?? []).filter((t) => now - t < windowMs);
+  if (recent.length >= max) {
     hits.set(key, recent);
     return true;
   }
@@ -24,8 +31,16 @@ export function rateLimited(key: string, now = Date.now()): boolean {
   return false;
 }
 
-export function clientIp(req: Request): string {
-  const fwd = req.headers.get("x-forwarded-for");
+export function rateLimited(key: string, now = Date.now()): boolean {
+  return rateLimitedWith(key, MAX_HITS, WINDOW_MS, now);
+}
+
+export function clientIpFromHeaders(h: Headers): string {
+  const fwd = h.get("x-forwarded-for");
   if (fwd) return fwd.split(",")[0].trim();
-  return req.headers.get("x-real-ip") ?? "unknown";
+  return h.get("x-real-ip") ?? "unknown";
+}
+
+export function clientIp(req: Request): string {
+  return clientIpFromHeaders(req.headers);
 }

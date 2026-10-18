@@ -3,10 +3,14 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { headerLink } from "@/content/accounts";
 import { nav, site } from "@/content/site";
 import { Logo } from "./Logo";
 import { ThemeToggle } from "./ThemeToggle";
 import { cn } from "@/lib/cn";
+
+// Login link only where accounts are switched on (never on the live site).
+const accountsOn = process.env.NEXT_PUBLIC_ACCOUNTS_ENABLED === "true";
 
 export function Header() {
   const [scrolled, setScrolled] = useState(false);
@@ -72,6 +76,14 @@ export function Header() {
               {item.label}
             </Link>
           ))}
+          {accountsOn && (
+            <Link
+              href={headerLink.href}
+              className="inline-flex min-h-11 items-center rounded-full border border-white/60 px-4 text-sm font-medium text-white transition hover:bg-white/15"
+            >
+              {headerLink.label}
+            </Link>
+          )}
           <ThemeToggle />
         </nav>
 
@@ -113,6 +125,17 @@ export function Header() {
                 </Link>
               </li>
             ))}
+            {accountsOn && (
+              <li className="border-b border-white/15">
+                <Link
+                  href={headerLink.href}
+                  onClick={() => setOpen(false)}
+                  className="flex min-h-14 items-center font-heading text-xl text-white"
+                >
+                  {headerLink.label}
+                </Link>
+              </li>
+            )}
           </ul>
           <div className="mx-auto mt-6 flex max-w-md items-center justify-between text-white">
             <span className="text-sm font-medium">Light / dark mode</span>
