@@ -1,6 +1,6 @@
 # RSF Website Phase 2: Plan (DRAFT for owner review)
 
-Status: draft v2. Decided so far: closing 6:00 PM, hold 2 hours, overnight approve-then-pay, staff review of student-free bookings, day prices per hour / per day / per month (no weekly price, half-day optional), and email sent through a configurable provider because the Resend domain cannot be verified for about two months (section 3A). Remaining questions use the stated defaults unless you say otherwise. Anything marked **[FROM MEMORY: VERIFY]** is a figure or claim I wrote from general knowledge, not from a source checked today. Nothing in this plan has been built. No packages installed, no code written, no Supabase project created. Branch: `phase-2`. Phase 1 stays live on `main` (tag `phase-1-complete`) and is not touched until go-live is approved.
+Status: **APPROVED by the owner for M1 only** (draft v2 plus the answers in section 9). M2 onward need separate approval. Decided so far: closing 6:00 PM, hold 2 hours, overnight approve-then-pay, staff review of student-free bookings, day prices per hour / per day / per month (no weekly price, half-day optional), and email sent through a configurable provider because the Resend domain cannot be verified for about two months (section 3A). Remaining questions use the stated defaults unless you say otherwise. Anything marked **[FROM MEMORY: VERIFY]** is a figure or claim I wrote from general knowledge, not from a source checked today. Nothing in this plan has been built. No packages installed, no code written, no Supabase project created. Branch: `phase-2`. Phase 1 stays live on `main` (tag `phase-1-complete`) and is not touched until go-live is approved.
 
 First build: the booking calendar for the Day workspace and the Overnight workspace at RSF Tech & Space, with the database, accounts and admin area it needs.
 
@@ -224,7 +224,7 @@ Why approve-before-pay: nobody pays and then gets refused in person. If you pref
 Templates: verify email and password reset (sent by Supabase Auth through our SMTP, 3A), booking created (bank details, reference, hold deadline), hold expiring soon, "I've paid" received (customer), payment awaiting review (admin), confirmed, rejected (with reason), cancelled, expired, overnight approved (location only after payment is confirmed), reminder the day before, monthly pass starts tomorrow, monthly pass ends in 5 days (with a Renew link). Every email is also visible inside the member's account (My bookings), so a lost or filtered email never hides a booking. Failures are recorded in `email_log` and retried by a scheduled job; a failed email never blocks the booking. How the sender is configured is in 3A.
 
 ### 3.7 Monthly desk pass (day workspace)
-**What it is.** One desk guaranteed for `monthly_pass_days` (proposed 30) **consecutive calendar days** from a start date the member chooses. It is "a desk", not a named desk: the member sits at any free desk on arrival, and staff look the pass up by name or reference. Closed days inside the window still count toward the 30 days (nothing is owed for a normal closed day). If the Foundation closes unexpectedly for several days, an Admin can **extend** the pass (audited).
+**What it is.** One desk guaranteed for `monthly_pass_days` (decided: 30) **consecutive calendar days** from a start date the member chooses. The booking page, the pass description and the confirmation email must all state this plainly: "30 calendar days from your start date. Sundays and other closed days still count." It is "a desk", not a named desk: the member sits at any free desk on arrival, and staff look the pass up by name or reference. Closed days inside the window still count toward the 30 days (nothing is owed for a normal closed day). If the Foundation closes unexpectedly for several days, an Admin can **extend** the pass (audited).
 
 **Capacity.** A pass occupies 1 desk in every hour slot of every open day in its window. At booking time the same locked check as 3.3 runs and must pass **both** tests for every day: (1) free desks in the slot (capacity 30, counting all booking types) and (2) fewer than `monthly_pass_max_desks` passes already cover that day. Test 2 is what stops monthly customers from taking all 30 desks and locking out hourly and daily users. When the cap is full, the page says monthly passes are fully booked for that start date and offers the next available start date. A pass holder cannot also book an hourly or daily slot on days the pass covers (the form says "Your monthly pass covers this day"), so desks are never double-counted. If opening hours change later, the pass automatically follows the new hours (future slot rows are regenerated and the admin sees a warning if this overfills any hour).
 
@@ -408,7 +408,7 @@ Each milestone is built on `phase-2`, tested on a Vercel preview deployment of t
 - `email_log` table and the Email health page (sent/failed, daily-cap warning).
 
 ### M3. Settings (the admin control panel)
-- Tables: `spaces`, `opening_hours`, `prices`, `settings`, `bank_details` with seed rows (day desks 30, opening 08:00, closing 18:00, everything priced left blank until you decide).
+- Tables: `spaces`, `opening_hours`, `prices`, `settings`, `bank_details` with seed rows (day desks 30, opening 08:00, closing 18:00, Monday to Saturday open and Sunday closed, monthly pass desk cap 10, everything priced left blank until you decide).
 - Admin Settings pages: Hours, Capacity, Pricing (hour, day, month, optional half day; overnight night and optional month; no weekly), Students, Bank details, Booking rules (including monthly pass rules and `require_verified_email`). Every save audited; bank-detail changes email the owner.
 - Public read: a small component that shows opening hours, desk count, "Free for students" (only if on) and prices (or "Contact us for pricing", or nothing for the optional half-day and overnight-month options) on Tech & Space. **Behind the `booking_enabled` flag, off by default**, so the live site does not change.
 
@@ -534,7 +534,7 @@ Each milestone is built on `phase-2`, tested on a Vercel preview deployment of t
 **Environment variables to add in Vercel (later, by you):** `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` (server only), `EMAIL_PROVIDER` (`smtp` now, `resend` later), `EMAIL_FROM`, `EMAIL_REPLY_TO`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` (server only), `EMAIL_DAILY_CAP`, `NEXT_PUBLIC_ACCOUNTS_ENABLED`. Production and Preview get different Supabase values. Existing `RESEND_API_KEY`, `FORMS_TO_EMAIL`, `FORMS_FROM_EMAIL` keep their current role.
 
 **Decisions needed** (recommended defaults in brackets, so you can answer "default" to any):
-- Q1. Decided: closing 6:00 PM, opening 8:00 AM. Still to confirm: which weekdays are closed (editable later in admin).
+- Q1. Decided: opening 8:00 AM, closing 6:00 PM, **open Monday to Saturday, closed Sunday** (all editable in admin).
 - Q2. Decided: 2-hour hold.
 - Q3. **What "half day" means**, if you use a half-day price (default: morning = opening to 1:00 PM, afternoon = 1:00 PM to closing). Leaving the price blank hides the option.
 - Q4. Decided: overnight team approves in person first, then the person pays.
@@ -545,12 +545,22 @@ Each milestone is built on `phase-2`, tested on a Vercel preview deployment of t
 - Q9. **Overnight check-in and check-out times**, house rules text, and the **longest single overnight stay** (default: 7 nights).
 - Q10. Whether the Foundation's accountant needs **financial records kept longer than 12 months** (default: 12 months, then anonymise).
 - Q11. Wording for the **Terms of use** of booking (no-shows, behaviour, liability); I will draft, your lawyer should review.
-- Q12. **Monthly pass:** 30 consecutive calendar days from the start date (default) or 30 open days? Maximum desks passes may hold at once (default 10 of 30)? Free-for-students never applies to the monthly pass (default yes)?
+- Q12. Decided: monthly pass = 30 consecutive calendar days from the start date (Sundays and other closed days still count, and the website must say so clearly). Pass desk cap = 10 of 30, editable by Admin. Free-for-students never applies to the monthly pass (default, not contradicted).
 - Q13. **Overnight monthly price:** offer a monthly bed at all? (default: not at launch; leave the price blank and it stays hidden).
-- Q14. Whether you accept the **Gmail bridge's limits** (about 500 emails a day, gmail.com sender address, some spam-folder risk) for the first two months (recommended), or prefer to buy a separate email domain (option C2) or use a company mailbox (C1).
+- Q14. Decided: the main sender is the dedicated Gmail account (address kept out of this file, set in environment variables; 2-Step Verification on, app password), because the owner controls it. The info@rafaelsupportfoundation.org mailbox (option C1) is an optional test only, not the main sender.
 
 Out of scope for this plan (listed in CLAUDE.md as Phase 2 but later): courses/LMS, quizzes and certificates, consulting payments, SMS. They reuse the same accounts and admin area, so nothing here blocks them. SMS one-time codes (option B) are not part of this plan.
 
 ---
 
 *End of draft v2. No application code has been written and no packages installed.*
+
+---
+
+## 9. Owner decisions log
+
+- Plan approved; M1 may start. M2 must not start until approved separately.
+- Sender: the dedicated Gmail account (address set in environment variables, not written here; 2-Step Verification, app password), main sender for the Gmail bridge. info@rafaelsupportfoundation.org is an optional test only.
+- Monthly pass: 30 calendar days, stated clearly on the website. Desk cap 10 of 30, editable by Admin.
+- Opening hours default: 8:00 AM to 6:00 PM, Monday to Saturday, closed Sunday (editable by Admin).
+- The phase-2 branch is pushed to origin (phase-2 only, never main).
