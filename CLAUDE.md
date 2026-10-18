@@ -28,24 +28,40 @@ stays "supporting young people", not "selling services".
 - The "Support Our Mission" button links to the Get Involved page. There are
   no online donations in Phase 1.
 
-## PHASE_STATUS: Phase 1 (current)
+## PHASE_STATUS: Phase 1 (live on `main`)
 Every page exists and looks finished, but nothing needing an account or a live
 calendar is real yet. Booking, enrollment and consulting UI submit to a simple
 form endpoint that sends an email notification via Resend (no Supabase) for
 manual follow-up.
 
-**Phase 2 features must NOT be built yet:**
+## PHASE_STATUS: Phase 2 (authorised on the `phase-2` branch only)
+Phase 2 (accounts, database, booking, admin) may be planned and built on the
+`phase-2` branch only, in the small milestones set out in
+`docs/PHASE2-PLAN.md`, after the owner approves each milestone. Do not start a
+milestone without that approval.
+
+Phase 2 covers:
 - Auth (login/register), user dashboard (My Bookings / My Courses / My Applications)
-- Payments (Paystack, bank transfer, webhooks)
+- Payments by bank transfer only, with manual confirmation (see Phase 2 rules)
 - Live booking calendar / availability logic
 - Quiz and certificate system (also the rest of the LMS backend: progress
   tracking, enrollments, gamification, `/verify-certificate`)
 - Admin panel, Supabase RLS policies, role-based access, 2FA, audit log
 - Transactional email/SMS flows beyond a basic form notification
 
-Course "Enroll" buttons show "Coming Soon". Course catalog/detail is display-only
-with no prices. If a task seems to require a Phase 2 feature, stop and
-ask. Phase 2 is built later on a separate `phase-2` branch.
+**Phase 2 rules**
+- Never commit or push Phase 2 work to `main`. Check `git branch --show-current`
+  before committing; if it is not `phase-2`, stop and ask. `main` stays the
+  Phase 1 site that is deployed.
+- Payments are bank transfer only. No Paystack, and no other online payment
+  gateway.
+- Never commit secrets or `.env.local`. The website must never collect or store
+  ID documents.
+
+On `main`, Phase 1 behaviour stays as it is: course "Enroll" buttons show
+"Coming Soon", the course catalog/detail is display-only with no prices, and
+forms send an email notification via Resend. If a task seems to need a Phase 2
+feature while on `main`, stop and ask.
 
 ## Logo
 The logo file is at `/public/images/logo.png` and must be used as-is: no
@@ -56,7 +72,7 @@ needed, ask the user for a light-outline variant rather than altering it.
 - Next.js (App Router) + TypeScript + Tailwind CSS
 - Framer Motion for animation
 - Hosted on Vercel
-- Phase 2 only: Supabase (Postgres + Auth + Storage), Paystack + manual bank transfer
+- Phase 2 only: Supabase (Postgres + Auth + Storage), manual bank transfer only (no Paystack)
 
 ## Brand colors (use these exact hex values, never approximate)
 - Deep Navy: #143BA2 — nav, headers, primary surfaces
