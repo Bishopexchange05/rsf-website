@@ -1,0 +1,556 @@
+# RSF Website Phase 2: Plan (DRAFT for owner review)
+
+Status: draft v2. Decided so far: closing 6:00 PM, hold 2 hours, overnight approve-then-pay, staff review of student-free bookings, day prices per hour / per day / per month (no weekly price, half-day optional), and email sent through a configurable provider because the Resend domain cannot be verified for about two months (section 3A). Remaining questions use the stated defaults unless you say otherwise. Anything marked **[FROM MEMORY: VERIFY]** is a figure or claim I wrote from general knowledge, not from a source checked today. Nothing in this plan has been built. No packages installed, no code written, no Supabase project created. Branch: `phase-2`. Phase 1 stays live on `main` (tag `phase-1-complete`) and is not touched until go-live is approved.
+
+First build: the booking calendar for the Day workspace and the Overnight workspace at RSF Tech & Space, with the database, accounts and admin area it needs.
+
+---
+
+## 0. Decisions already fixed (from the owner)
+
+- Bank transfer only. No Paystack, no cards. Bank details are stored in the database and edited in the admin panel, never hard-coded.
+- Visitors must have a verified account to book. No guest booking.
+- Flow: pending payment (slot held, auto-expires) -> customer taps "I've paid" (optional transfer reference) -> admin checks the bank account and confirms -> customer emailed -> confirmed. Admin can reject or cancel. Every booking has a unique reference used as the transfer narration.
+- Overnight: 18+ (checkbox plus in-person check), team approval in person, never any ID document collected or stored, location shared only after approval.
+- Everything operational is editable from the admin panel: hours (per weekday, closed days), day desks (30), day prices (per hour, per day, per month; half day optional and hidden when empty; no weekly price), "Free for students" switch, overnight price (per night, optional per month), overnight capacity, bank details, hold time. A price that is not set shows "Contact us for pricing".
+- Roles: Admin (everything), Staff (view bookings, confirm/reject payments, nothing else), Member (book, see own bookings). Only an Admin creates or promotes staff.
+- Emails go out through one configurable sender. Until the Resend domain is verified (about two months), the sender is a dedicated Gmail account over SMTP; switching to Resend later is a configuration change, not a code change (section 3A).
+- NDPA 2023: collect only name, email, phone; keep records 12 months unless law requires longer; deletion of a user's data must be possible.
+- Existing contact/request forms keep working until the booking system is live and tested. Site stays fast and dark mode keeps working.
+
+---
+
+## 1. Recommended stack
+
+**Recommendation: confirm Supabase (Postgres + Auth + Row Level Security), keep Next.js on Vercel.**
+
+Why it fits:
+- Booking needs real transactions and constraints (no double-booking, seat counts). Postgres does this properly; a document store or spreadsheet does not.
+- Auth (email verification, password reset, sessions, optional TOTP 2FA) is built in, so we do not write password handling ourselves.
+- Row Level Security enforces "members only see their own bookings" inside the database, so a bug in a page cannot leak data.
+- Scheduled jobs (`pg_cron`) can expire unpaid holds and run the 12-month retention clean-up without extra infrastructure.
+- It matches what CLAUDE.md already names for Phase 2.
+
+Alternatives considered:
+- Neon/Postgres + Auth.js: also fine, but we would assemble auth, email verification, RLS-style protection and cron ourselves. More code, more risk.
+- Firebase: weaker fit for relational booking rules and capacity counting.
+Verdict: Supabase is the least code for the most safety.
+
+**Challenges and limits to know about** (figures are from my knowledge of the free plan; re-check supabase.com/pricing before relying on them):
+1. **Free projects pause after about a week of inactivity.** A paused database means nobody can log in or book. For a live booking system, plan on the paid Pro plan (about USD 25 per month) at launch, which also gives daily backups. Free tier is fine for building and testing.
+2. **No automatic backups on free.** Another reason for Pro at launch; until then we export manually.
+3. **Supabase's built-in auth email is not suitable for real customers** (confirmed in section 3A). We must connect our own SMTP for verification and reset emails. Because the Resend domain cannot be verified for about two months, section 3A plans a bridge (a dedicated Gmail account) and how to switch to Resend later.
+4. Free limits (roughly 500 MB database, 50,000 monthly active users, 5 GB egress) are far above what one workspace needs. They will not be a problem.
+5. **Region:** pick the closest available (Europe or South Africa if offered) for Nigerian users. Data will be stored outside Nigeria; the privacy policy must say so (it already does for other providers).
+6. **Two Supabase projects:** one for development/preview, one for production. Free allows two; Pro is per project. Preview deployments of `phase-2` use the development project so test data never touches real customers.
+7. **Vercel plan:** the Hobby plan is meant for non-commercial use and limits cron jobs to once a day. Because we take payments (even by transfer) check Vercel's terms; we avoid Vercel cron entirely by using `pg_cron` in the database.
+
+**Other stack choices (all within CLAUDE.md):**
+- `@supabase/supabase-js` and `@supabase/ssr` for server-side sessions via cookies.
+- Next.js server components / route handlers for all writes. No Supabase service-role key in the browser, ever.
+- Money stored as integer **kobo** (NGN x 100), never floats.
+- Timezone: store `timestamptz` (UTC); all booking logic and display in `Africa/Lagos` (WAT, UTC+1, no daylight saving).
+- Validation with the same server-side approach as Phase 1 forms (shared validators, sanitise, length limits).
+
+---
+
+## 2. Data model
+
+Conventions: every table has `id uuid primary key default gen_random_uuid()`, `created_at timestamptz default now()`. RLS is enabled on every table. All money columns are `bigint` kobo. `nullable price = not set` (site shows "Contact us for pricing").
+
+### 2.1 `profiles` (one row per account, linked to Supabase `auth.users`)
+| field | type | notes |
+|---|---|---|
+| id | uuid PK, FK auth.users | same id as the login |
+| full_name | text | required |
+| phone | text | Nigerian format, normalised +234 |
+| role | enum `member`/`staff`/`admin` | default `member`; only changeable by an Admin via a database function |
+| is_student | boolean | self-declared; verified in person |
+| is_active | boolean | admin can disable an account |
+| terms_accepted_at | timestamptz | consent record |
+| deleted_at | timestamptz | set when data deletion is processed |
+| created_at, updated_at | timestamptz | |
+Email lives in `auth.users` (not duplicated). Nothing else is collected (no date of birth, no address, no ID).
+
+### 2.2 `spaces`
+| field | type | notes |
+|---|---|---|
+| slug | text unique | `day`, `overnight` |
+| name | text | |
+| capacity | int | day: 30 desks per slot; overnight: people at once |
+| is_bookable | boolean | master on/off switch per space |
+| requires_approval | boolean | true for overnight |
+| min_age | int | 18 for overnight, null for day |
+
+### 2.3 `opening_hours` (per weekday, day space)
+`weekday smallint (0-6)`, `is_closed boolean`, `opens_at time`, `closes_at time`. Seven rows. Opening default 08:00; closing is **not decided** (open question Q1). Optional later: `date_overrides` table for public holidays/special closures (listed in milestone 3 as optional).
+
+### 2.4 `prices`
+| field | type | notes |
+|---|---|---|
+| space_id | FK | |
+| kind | enum `hour` / `half_day` / `day` / `month` / `night` | **There is no weekly kind.** Day space uses `hour`, `half_day`, `day`, `month`. Overnight uses `night` and optionally `month` |
+| amount_kobo | bigint null | null = not set |
+| updated_by, updated_at | | |
+
+How an empty price behaves (one rule per kind, applied everywhere on the site and in the booking form):
+- `hour`, `day`, `month` (day space) and `night` (overnight) are the core options. If empty, that option shows **"Contact us for pricing"** with a link to the contact page, and cannot be booked online. It never shows an empty or zero price.
+- `half_day` (day space) and `month` (overnight) are **optional**. If empty, the option is **hidden entirely**: not on the pricing display, not in the booking form, nowhere in the page source.
+- A price of exactly 0 is not allowed in this table; free access is handled only by the "Free for students" switch.
+
+### 2.5 `settings` (single row of business rules; typed columns, not free-form)
+| field | type | notes |
+|---|---|---|
+| free_for_students_enabled | boolean | when true the website shows "Free for students"; when false it is hidden entirely |
+| student_free_applies_to | text[] | which options can be free: default `hour`, `half_day`, `day`. **The monthly pass is never free** |
+| student_free_max_per_day | int | proposed 1 free booking per student per day, up to `max_hours_per_booking` |
+| hold_minutes | int | how long an unpaid booking holds its seats (decided: 120) |
+| claimed_review_hours | int | how long an "I've paid" booking can wait before it is flagged overdue for admin |
+| advance_booking_days | int | how far ahead people can book (proposed 30) |
+| max_hours_per_booking | int | proposed 10 |
+| cancellation_cutoff_hours | int | self-cancel of single bookings allowed until this long before start (proposed 24) |
+| half_day_definition | jsonb | e.g. morning = opening to 13:00, afternoon = 13:00 to closing (Q3); only used when a half-day price exists |
+| monthly_pass_days | int | length of a monthly pass (proposed 30 consecutive calendar days) |
+| monthly_pass_max_desks | int | most desks that monthly passes may hold at once (proposed 10 of the 30), so hourly and daily customers always have desks |
+| monthly_start_window_days | int | how far ahead a pass start date may be chosen (proposed 14) |
+| monthly_self_cancel_cutoff_hours | int | pass can be self-cancelled until this long before its start date (proposed 48) |
+| overnight_max_nights | int | longest single overnight booking (proposed 7); longer stays use the monthly option or contact us |
+| overnight_window | text/json | check-in and check-out times |
+| overnight_location_private | text | the secret address text, only readable via the approval rule (section 5) |
+| overnight_rules_text | text | house rules shown after approval |
+| require_verified_email | boolean | default true. If false, a member can book with an unverified email provided a phone number is present and staff call or WhatsApp to confirm (emergency fallback, section 3A.6) |
+| booking_enabled | boolean | global kill-switch; false keeps the site exactly like Phase 1 |
+
+Not stored in the database: email provider credentials and the sender address. Those are environment variables (section 3A.4), because secrets must never sit in a table an admin page can display.
+
+### 2.6 `bank_details` (single active row; editable by Admin only)
+`bank_name`, `account_number`, `account_name`, `note` (optional text shown with the details), `updated_by`, `updated_at`.
+Customers only see these after creating a booking (never on a public page).
+
+### 2.7 `bookings`
+| field | type | notes |
+|---|---|---|
+| reference | text unique | e.g. `RSF-7K3Q9M`: 6 characters from an alphabet without 0/O/1/I, generated server-side, retried on clash |
+| user_id | FK profiles | owner |
+| space_id | FK spaces | |
+| kind | enum | `hour`, `half_day`, `day`, `month`, `night` (the price option chosen). `month` on the day space is the monthly desk pass; `month` on the overnight space is a monthly bed |
+| starts_at, ends_at | timestamptz | hour/half_day/day: within one opening day; month: start date to start date + `monthly_pass_days`; overnight: nights as check-in/out |
+| seats | int | 1 for now (one person per booking). Kept as a column so group bookings can come later |
+| status | enum | see 3.1 |
+| amount_kobo | bigint | price **snapshot** at booking time, so later price changes never alter it. 0 for free-for-students |
+| is_free_student | boolean | booking used the student-free option |
+| confirmed_18_plus | boolean + `confirmed_18_plus_at` | overnight checkbox record |
+| hold_expires_at | timestamptz null | set while `pending_payment`; cleared once claimed |
+| approved_by, approved_at | | overnight in-person approval |
+| cancelled_by, cancelled_at, cancel_reason | | |
+| created_at, updated_at | | |
+
+### 2.8 `booking_slots` (what makes seat counting safe)
+One row per space per hour-slot a booking occupies: `booking_id`, `space_id`, `slot_start timestamptz`. A slot is counted for capacity only while its booking's status is a **counting status** (3.1). Overnight uses one slot per night. A monthly pass writes one slot row for every open hour of every open day in its window (about 260 rows for a 30-day pass), so one counting rule serves every booking type. This table is what the capacity check counts and locks against.
+
+### 2.9 `payments` (payment records, one per booking attempt)
+| field | type | notes |
+|---|---|---|
+| booking_id | FK | |
+| method | text | always `bank_transfer` |
+| expected_kobo | bigint | copy of the booking amount |
+| customer_reference | text null | what the customer typed (transfer reference / sender name) |
+| claimed_at | timestamptz null | when they tapped "I've paid" |
+| status | enum `awaiting`/`claimed`/`confirmed`/`rejected` | |
+| confirmed_by, confirmed_at | | admin/staff who checked the bank account |
+| rejected_reason | text null | shown to the customer |
+| received_kobo | bigint null | admin can record what actually arrived (mismatch handling) |
+No card or account numbers of customers are stored; we never see their bank details.
+
+### 2.10 `audit_log` (append-only)
+`actor_id`, `actor_role`, `action` (e.g. `booking.confirm`, `settings.price.update`, `role.promote`), `entity_type`, `entity_id`, `before jsonb`, `after jsonb`, `created_at`. No update or delete allowed for anyone (RLS plus revoked privileges). Admin can read it; Staff cannot.
+
+### 2.11 `email_log`
+`to_user_id`, `template`, `booking_id`, `status` (`sent`/`failed`), `provider_id`, `error` (no secrets), `created_at`. Lets us retry failures and prove what was sent.
+
+### 2.12 `rate_events` (small table for limits that must survive serverless restarts)
+`key` (e.g. user id or IP hash), `action`, `created_at`. Used for booking-attempt limits (the in-memory limiter used by Phase 1 forms resets on every serverless instance, so it is not enough here).
+
+Retention: `pg_cron` job deletes or anonymises bookings, payments, email logs and rate events 12 months after the booking end date (see section 5.8 for the financial-records caveat).
+
+---
+
+## 3. Booking and bank-transfer flow
+
+### 3.1 Booking statuses
+`pending_payment` -> `payment_claimed` -> `confirmed` (happy path, day space)
+`pending_approval` -> `approved` -> `pending_payment` -> ... (overnight, see 3.4)
+Terminal: `rejected`, `cancelled`, `expired`, `completed`, `no_show`.
+
+**Counting statuses** (they occupy seats): `pending_payment` (while `hold_expires_at` is in the future), `payment_claimed`, `confirmed`, and for overnight `pending_approval` and `approved`. Everything else frees the seats immediately.
+
+### 3.2 Day workspace, step by step
+1. **Account:** visitor registers, verifies email, logs in. Unverified accounts cannot book (database function checks `email_confirmed_at`), unless the owner has switched `require_verified_email` off as an emergency fallback (3A.6).
+2. **Pick:** choose a date (open day, within `advance_booking_days`), then hourly slots, a full day, or a half day (offered only when a half-day price is set). Monthly passes are booked from a separate "Monthly pass" option (3.7). The page shows remaining desks per hour from a public, read-only availability function that returns **counts only**, never other people's data.
+3. **Price:** shown from `prices`. If an hour, day or month price is not set, that button becomes "Contact us for pricing" and no booking is created. An unset half-day price hides the half-day option entirely. If "Free for students" is on and the member ticked student, an eligible option shows as free (3.5).
+4. **Create booking** (one database function, all-or-nothing):
+   - lock the space row (`SELECT ... FOR UPDATE`), so two people cannot book the last desk at the same time;
+   - check the member is verified, active, within limits (max 3 open `pending_payment` bookings, max hours, cutoff, opening hours, closed days);
+   - for every hour slot, count counting-status seats; reject with "No longer available" if any slot would exceed `capacity`;
+   - insert the booking (price snapshot, unique reference, `hold_expires_at = now + hold_minutes`) and its `booking_slots`;
+   - write an audit-style event; return the reference.
+5. **Pay screen:** shows the bank details (from the database), the exact amount, the **reference to use as the transfer narration**, and a live countdown of the hold. Email sent with the same information.
+6. **"I've paid":** customer taps the button, optionally types a transfer reference / sender name. Status -> `payment_claimed`, `hold_expires_at` cleared (their seats stay held for admin review; they are not auto-expired because they say they paid). Admin gets a notification email.
+7. **Admin check:** admin/staff opens the payment queue, checks the bank account for the reference and amount, then **Confirm** (-> `confirmed`, customer emailed) or **Reject** with a reason (-> `rejected`, seats freed, customer emailed with the reason and what to do). Staff and Admin may both do this; every action is logged.
+8. **Unpaid:** if the member never taps "I've paid" the hold lapses at `hold_expires_at`, the booking becomes `expired`, the seats are freed, and the member can rebook. A reminder email goes out shortly before expiry.
+9. **Late payment:** if money arrives after expiry, admin finds the reference and either re-opens the booking (if seats still free) or tells the customer the slot is gone and arranges a refund by hand. Refunds are manual and outside the system (Q7).
+10. **After:** a daily job marks past confirmed bookings `completed`.
+
+### 3.3 Seat counting, holds and expiry (how overbooking is prevented)
+- Capacity is **per hour slot**, taken from `spaces.capacity` (30 now). The check counts rows in `booking_slots` joined to counting-status bookings. The count and the insert happen inside the same transaction that holds the space-row lock, so concurrent requests queue instead of racing.
+- **Expiry is enforced two ways:** (a) every capacity check ignores `pending_payment` holds whose `hold_expires_at` has passed, so an expired hold never blocks anyone even if the cleanup job is late; (b) a `pg_cron` job every minute flips overdue holds to `expired`.
+- **Changing capacity downward** (e.g. 30 -> 20) never cancels existing bookings. It only limits new ones, and the admin settings page warns when existing bookings already exceed the new number for a future slot.
+
+### 3.4 Overnight workspace (proposed order, Q4 asks you to confirm)
+1. Member (18+ checkbox ticked, stored with timestamp) requests nights. Status `pending_approval`; seats are tentatively counted so the room cannot be oversold.
+2. The team sees the request, invites the person to the office, and meets them. **ID is checked in person only; the website never has an upload field and never stores ID data.** Admin/Staff clicks **Approve** (-> `approved`) or **Reject**.
+3. On approval the member gets an email and the booking moves to `pending_payment` with the normal hold and bank-transfer steps.
+4. After payment is confirmed, the **location and house rules become visible to that member** on their booking page and in the confirmation email. Before that point the location text is not readable by anyone but Admin/Staff (section 5.5).
+5. The overnight capacity counts people per night. Check-in/out times come from settings. A single booking may be up to `overnight_max_nights`. Longer stays use the optional monthly bed (3.8), which is hidden unless an overnight monthly price is set.
+Why approve-before-pay: nobody pays and then gets refused in person. If you prefer pay-then-approve, only the order of two steps changes.
+
+### 3.5 Free for students
+- Admin switch `free_for_students_enabled`. **Off: the words "Free for students" appear nowhere on the site** and the booking option does not exist. On: it shows on the Tech & Space page and in the booking form.
+- It applies only to hourly, half-day and full-day day-space bookings (`student_free_applies_to`). **The monthly pass and anything overnight are never free.** Limit proposed: one free booking per student per day (`student_free_max_per_day`), so one account cannot take a desk for the whole month for nothing.
+- A member who ticks "I am a student" books with `amount_kobo = 0`, `is_free_student = true`. Student status is checked **in person on arrival** (they show a student ID to staff; we never upload or store it). Decided: staff review each free booking before it is confirmed.
+- Staff can mark a free booking `no_show` to track abuse; an Admin can remove a member's student flag.
+
+### 3.6 Emails sent
+Templates: verify email and password reset (sent by Supabase Auth through our SMTP, 3A), booking created (bank details, reference, hold deadline), hold expiring soon, "I've paid" received (customer), payment awaiting review (admin), confirmed, rejected (with reason), cancelled, expired, overnight approved (location only after payment is confirmed), reminder the day before, monthly pass starts tomorrow, monthly pass ends in 5 days (with a Renew link). Every email is also visible inside the member's account (My bookings), so a lost or filtered email never hides a booking. Failures are recorded in `email_log` and retried by a scheduled job; a failed email never blocks the booking. How the sender is configured is in 3A.
+
+### 3.7 Monthly desk pass (day workspace)
+**What it is.** One desk guaranteed for `monthly_pass_days` (proposed 30) **consecutive calendar days** from a start date the member chooses. It is "a desk", not a named desk: the member sits at any free desk on arrival, and staff look the pass up by name or reference. Closed days inside the window still count toward the 30 days (nothing is owed for a normal closed day). If the Foundation closes unexpectedly for several days, an Admin can **extend** the pass (audited).
+
+**Capacity.** A pass occupies 1 desk in every hour slot of every open day in its window. At booking time the same locked check as 3.3 runs and must pass **both** tests for every day: (1) free desks in the slot (capacity 30, counting all booking types) and (2) fewer than `monthly_pass_max_desks` passes already cover that day. Test 2 is what stops monthly customers from taking all 30 desks and locking out hourly and daily users. When the cap is full, the page says monthly passes are fully booked for that start date and offers the next available start date. A pass holder cannot also book an hourly or daily slot on days the pass covers (the form says "Your monthly pass covers this day"), so desks are never double-counted. If opening hours change later, the pass automatically follows the new hours (future slot rows are regenerated and the admin sees a warning if this overfills any hour).
+
+**Payment (bank transfer, confirmed by staff).** Exactly the 3.2 flow: choose start date -> booking created as `pending_payment` with the 2-hour hold and the month price copied into the booking -> member transfers using the reference -> taps "I've paid" -> staff checks the account and confirms -> the pass is `confirmed`. If staff confirm **after** the chosen start date, the start moves to the confirmation day by default (the customer should not pay for days they could not use); an Admin can override with a reason. An unpaid hold expires and releases the desk like any other booking.
+
+**Cancellation and refunds.**
+- Unpaid or "I've paid" but not yet confirmed: the member can cancel at any time, seats are freed.
+- Confirmed, start date not yet reached: self-cancel until `monthly_self_cancel_cutoff_hours` (48 h) before the start date. The booking becomes `cancelled` and is flagged "refund owed". **Refunds are made by hand** by an Admin by bank transfer; staff collect the refund account details by phone or WhatsApp (never stored on the site), and record the refund reference in the audit log.
+- After the start date: no self-cancel and no automatic refund. An Admin may cancel and approve a partial, discretionary refund; the amount and reason are recorded.
+- Passes are not transferable between people and cannot be paused in version 1.
+
+**Renewal.** A "Renew" button on an ending pass creates a new booking that starts the day after it ends. Desk availability is checked again at that moment (a renewal is not guaranteed unless it is paid before another member takes the desk). Reminder email 5 days before the end.
+
+### 3.8 Overnight monthly bed (optional)
+Only available when an overnight monthly price is set; otherwise hidden. A bed for 30 consecutive nights, counted against overnight capacity for every night in the window (capacity is people at once). It follows the same approve-first rule: the person is approved once in person, then pays by bank transfer, then the location is revealed. Cancellation and refund rules mirror 3.7. The per-night price is the standard option and is limited to `overnight_max_nights` per booking.
+
+---
+
+## 3A. Email delivery and verification until the Resend domain is verified
+
+**Situation.** The Resend sending domain cannot be verified for about two months because DNS access at GoDaddy was removed. Until then Resend can only deliver to the account owner's own address, so it cannot send verification or booking emails to customers. The system needs a bridge, and a clean way to switch later.
+
+### 3A.1 Is Supabase's built-in email sender suitable? **No.**
+[FROM MEMORY: VERIFY on supabase.com/docs, Auth, "Send emails"] The default sender is a shared service meant for trying things out: it is rate-limited to a very small number of emails per hour, it has only delivered to addresses belonging to members of the Supabase project team (so it would not reach real customers at all), it uses a generic sender, and it comes with no delivery guarantee. Supabase's own guidance is that it is not for production. Confirmed unsuitable: we use custom SMTP from the first milestone.
+
+### 3A.2 Option A: dedicated Gmail account as custom SMTP
+Create a new Google account used only for sending (not anyone's personal inbox), turn on 2-Step Verification, create an **app password**, and enter smtp.gmail.com with that app password in two places: Supabase (Auth, SMTP settings) for verification and reset emails, and our app's environment for booking emails.
+
+Honest limits **[FROM MEMORY: VERIFY each against Google's current Gmail and Workspace documentation]**:
+- **Daily cap:** about 500 recipients per rolling 24 hours for a free Gmail account over SMTP (about 2,000 for Google Workspace). Going over can pause sending for up to about a day. Our expected volume (a few hundred emails a day at most) fits, but the cap is shared by verification, reset and booking emails.
+- **Sender address:** Gmail sends as the authenticated account (for example `something@gmail.com`). The display name can say "Rafael Support Foundation", and Reply-To can be set to the real info@ address. It cannot be `@rafaelsupportfoundation.org` until the domain route exists.
+- **Spam-folder risk:** mail sent through Google's own servers passes SPF, DKIM and DMARC for gmail.com, so it usually reaches Gmail inboxes, which most Nigerian users have. It is more likely to land in spam with Yahoo and Outlook, with a brand-new account, with bursts of identical emails, and when the message links to a different domain than the sender. It also looks less official, and a sender that is a gmail.com address is less trusted by careful users.
+- **Account risk:** Google can suspend an account that sends automated bulk-looking mail. That would stop all sending at once. Mitigations: low volume, plain transactional wording, a recovery phone and email on the account, and a monitor (3A.5).
+- **App passwords** require 2-Step Verification and are not offered on some account types (for example Advanced Protection or accounts whose Workspace administrator disabled them).
+- **Supabase side:** Supabase keeps its own hourly limit on auth emails even with custom SMTP (a low default that can be raised in Auth, Rate Limits) [FROM MEMORY: VERIFY].
+- Cost: free.
+
+### 3A.3 Option B: SMS one-time codes (phone verification)
+**Supabase built-in phone providers [FROM MEMORY: VERIFY]:** Twilio, Twilio Verify, MessageBird, Vonage, Textlocal. **Nigerian providers** such as Termii or Africa's Talking are not built in; they are used through Supabase's "Send SMS" auth hook, a small server function we would write that forwards the code to their API. That is extra code and one more thing to maintain.
+
+| Item | What I believe [FROM MEMORY: VERIFY every row] |
+|---|---|
+| Cost per SMS | Twilio to Nigerian numbers: roughly USD 0.05 to 0.12 per message. Termii and Africa's Talking: roughly NGN 4 to NGN 8 per message (low confidence, check current price lists). At 300 codes a month, about NGN 1,500 to 2,500 locally, or USD 15 to 35 with Twilio |
+| Sender ID | Nigeria requires alphanumeric sender IDs to be registered through the SMS provider before messages are delivered reliably. Registration can take days to weeks and may carry a fee. Unregistered IDs can be replaced with a generic ID or blocked. Numeric long numbers are generally poor for Nigerian A2P SMS. Twilio in particular has been difficult for Nigerian alphanumeric delivery |
+| Do Not Disturb (DND) numbers | Many Nigerian numbers are on the DND list. OTPs to them need a transactional or DND-bypass route, which costs more and must be enabled with the provider |
+| Delivery reliability | Local aggregators with the right route are generally good on MTN, Airtel, Glo and 9mobile, but delays and occasional failures happen, especially at peak times. A "resend code" button and a fallback are needed |
+| Running cost risk | Prepaid balance: if it runs out, nobody can sign up or log in with a code |
+| NDPA 2023 | A phone number is personal data we already collect. SMS verification adds: an SMS provider as a data processor (cross-border for Twilio), a stored phone number in the login system, OTP logs (keep minimal and delete quickly), updated privacy text, and a written processor agreement. It also makes the phone number an identifier that must be kept accurate and removable when a user deletes their account |
+
+### 3A.4 Option C: other routes considered
+- **C1. A mailbox that already exists on rafaelsupportfoundation.org (for example info@ hosted by GoDaddy).** If you still know its login, we can send through that mailbox's SMTP server. It sends *as* @rafaelsupportfoundation.org with the mail host's own SPF and DKIM, so no DNS change is needed and it looks official. Daily caps are lower and vary by plan [FROM MEMORY: VERIFY]. **Only possible if you still have that mailbox's login.**
+- **C2. Buy a small separate domain just for email** (about USD 10 to 15 a year [FROM MEMORY: VERIFY]) at a registrar you control, verify it in Resend in an hour or so, and send from, for example, `no-reply@<new-domain>` with Reply-To set to the real info@. This gives true Resend deliverability now. **Caveats:** Resend's free plan has a lower daily cap than Gmail (about 100 emails a day [FROM MEMORY: VERIFY]), the sender domain differs from the website domain, and it is one more domain to renew.
+- **C3. WhatsApp click-to-chat from the admin panel (free, no integration).** A "Message on WhatsApp" button on each booking opens WhatsApp with a ready-written message (reference, amount, status). It needs no API and no cost. It is a **complement, not a replacement**, for sending verification links.
+- **C4. Third-party mail services with a "single sender" check (for example Brevo) using a Gmail address as sender: not recommended.** Mail that claims to be from gmail.com but is sent from another company's servers fails Gmail's DMARC policy and is often rejected or junked [FROM MEMORY: VERIFY].
+- **C5. Google Workspace for Nonprofits:** needs domain DNS access, so it does not help during the two-month gap.
+
+### 3A.5 Recommendation: **Option A (Gmail SMTP) now, built so Resend is a configuration switch**
+Why: it is free, can be working the same day, handles our volume, keeps verification by email (which also protects password resets), adds no SMS cost, no sender-ID registration, and no new personal-data processor beyond Google, which carries the same emails anyway. SMS is better kept as a possible later addition for the overnight service, not the sign-up gate. C1 replaces A if you still have the info@ mailbox login (more official sender). C2 is the upgrade if the Gmail deliverability test in M1 fails or volume grows. C3 is added regardless.
+
+**How to make switching a configuration change (no code later):**
+- All app emails go through one server function, `sendEmail()`, that reads environment variables: `EMAIL_PROVIDER` (`smtp` or `resend`), `EMAIL_FROM` (display name and address), `EMAIL_REPLY_TO`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, and the existing `RESEND_API_KEY`. The existing `FORMS_FROM_EMAIL` stays as the Phase 1 forms sender and is not touched.
+- Supabase's verification and reset emails use the SMTP fields in the Supabase dashboard (Auth settings). Switching means changing those fields; no deploy.
+- **Switch-over checklist (about 30 minutes, whenever the domain is verified):** verify the domain in Resend; set `EMAIL_PROVIDER=resend` and `EMAIL_FROM=info@rafaelsupportfoundation.org` in Vercel; replace the SMTP fields in the Supabase dashboard with Resend's SMTP details; send a test verification, reset and booking email; retire the Gmail account.
+- A small `nodemailer` dependency is needed for SMTP (to be installed only when M1 is approved).
+- The admin **Email health** page (section 4) shows emails sent and failed per day and warns at 70% of `EMAIL_DAILY_CAP` (an environment value, proposed 450 for Gmail).
+- Reduce spam risk: plain-text-friendly wording, one clear button or link, no images or attachments, a consistent display name, a "Didn't get the email? Check your spam folder or resend" panel with a 60-second resend cooldown, and a deliverability test to Gmail, Yahoo and Outlook inboxes before M1 is accepted.
+
+### 3A.6 How much risk remains if email verification is lighter, and does it change the recommendation?
+Staff confirm every booking only after seeing the money in the bank account, so **a fake or mistyped email cannot get anyone a confirmed booking**. That makes lighter verification much less risky than on a site that auto-confirms. What remains:
+1. **Mistyped or someone else's email:** the customer never gets the hold or confirmation, so they may miss payment deadlines or no-show. Mitigation: everything is also shown in the account page, plus WhatsApp click-to-chat.
+2. **Account takeover through password reset:** if the email on the account is not proven to belong to the person, whoever really owns that address could reset the password and see that person's bookings and phone number. This is the main reason **password reset must stay email-verified**.
+3. **Using the system to send mail to strangers:** signup with a victim's address would send them an email. Rate limits on signup and a verification-only first email limit this.
+4. **Desk hoarding with throwaway accounts:** limited by the 2-hour hold, the 3-unpaid-bookings cap and rate limits, and by staff only confirming paid bookings.
+5. **Student-free abuse:** the real check is the in-person student ID.
+**Conclusion: the recommendation does not change.** Keep email verification required (Option A makes it affordable). The `require_verified_email` setting exists as an emergency fallback only: if Gmail is suspended or hits its cap, an Admin can switch it off and bookings continue, with staff confirming by phone or WhatsApp before approving, and password reset temporarily disabled for unverified accounts. Overnight always needs the in-person visit regardless.
+
+---
+
+## 4. Admin panel pages
+
+Lives under `/admin` (not in the public nav, not in the sitemap, `noindex`). Login required; role checked on the server for every page and every action.
+
+| Page | Admin | Staff | What it does |
+|---|---|---|---|
+| Dashboard | yes | yes | Today's bookings, pending payment claims, overnight requests waiting, overdue reviews, desks used today |
+| Bookings | yes | yes | Search by reference, name, phone; filter by status/date/space; open a booking to see its timeline; actions: confirm, reject (reason), cancel (reason), mark no-show, "Message on WhatsApp" (ready-written click-to-chat message) |
+| Payment queue | yes | yes | Only `payment_claimed` bookings, oldest first, with expected amount, reference, customer note; one-click confirm / reject |
+| Overnight requests | yes | yes (proposed, Q6) | Approve or reject after the in-person meeting; shows 18+ confirmation record, no ID fields |
+| Today / calendar | yes | yes (read) | Hour-by-hour seat usage for a chosen day |
+| Monthly passes | yes | yes (read; Admin may extend or cancel) | Active and upcoming passes, desks held by passes against `monthly_pass_max_desks`, passes ending soon, refund-owed list |
+| Settings: Hours | yes | no | Per-weekday opening/closing, closed days |
+| Settings: Capacity | yes | no | Day desks, overnight capacity, bookable on/off per space |
+| Settings: Pricing | yes | no | Day space: per hour, per day, per month, optional half day. Overnight: per night, optional per month. Blank hour/day/month/night = "Contact us for pricing"; blank half day or overnight month = option hidden. No weekly price exists |
+| Settings: Students | yes | no | "Free for students" switch |
+| Settings: Bank details | yes | no | Bank name, account number, account name, note |
+| Settings: Booking rules | yes | no | Hold time, advance days, max hours, cancellation cutoff, half-day definition, monthly pass length, monthly pass desk cap, monthly start window and cancel cutoff, overnight max nights and window, overnight location and house rules, require verified email, global booking on/off |
+| Users | yes | no | List members; create or promote **staff**; demote; deactivate; process a data-deletion request; student flag |
+| Audit log | yes | no | Read-only list of every admin/staff action with before/after; filter by person, date, entity |
+| Email health | yes | no | Emails sent and failed per day, failed-email retry, share of the daily sending cap used, and which provider is active (never shows passwords or keys) |
+| My account | yes | yes | Change password, set up 2FA |
+
+Every settings save: validated on the server, writes the audit log (old and new value), and the public site reads the new value on its next request (short cache with revalidation so changes appear within seconds, no redeploy).
+
+Phase 1 pages stay as they are until go-live. A single `booking_enabled` flag (database) plus a build-time feature flag decide whether the Tech & Space page shows the booking calls to action or the existing request forms.
+
+---
+
+## 5. Security
+
+### 5.1 Principles
+- The **database is the last line of defence**: RLS is on for every table; the default is "no access", and access is granted per role.
+- Role is read from `profiles.role` in the database, **never from anything the user can edit** (not from user metadata, not from the browser).
+- Writes to bookings, payments and settings go **only** through server code and `SECURITY DEFINER` functions that re-check role and ownership. The browser cannot insert or update those tables directly.
+- The Supabase **service-role key** exists only in Vercel server environment variables, only used by a small number of server routes (email retry, cron-like tasks, account deletion). Public (anon) key is the only key in client code.
+
+### 5.2 Row Level Security rules (summary)
+| Table | Member | Staff | Admin |
+|---|---|---|---|
+| profiles | read/update own (not `role`, `is_active`) | read members who have bookings | read/update all; change role only via `set_user_role()` |
+| spaces, opening_hours, prices, public part of settings | read (via a view with no secrets) | read | read/write |
+| settings (private fields: overnight location, rules) | none directly | read | read/write |
+| bank_details | none directly; shown via a function only after they own a booking | read | read/write |
+| bookings | read own; create only via `create_booking()` | read all; confirm/reject via functions | read all; all actions via functions |
+| booking_slots | none | read | read |
+| payments | read own | read; update via functions | read; update via functions |
+| audit_log | none | none | read only; no one can update or delete |
+| email_log, rate_events | none | none | read |
+Tests for each row of this table are part of the milestone checklists (section 7).
+
+### 5.3 Preventing double-booking and overbooking
+Row lock on the space during capacity check and insert (3.3); unique reference; unique `(booking_id, slot_start)`; idempotent "I've paid" and confirm actions (pressing twice does nothing extra); a concurrency test that fires many simultaneous bookings at the last desk and proves only one succeeds is a launch requirement.
+
+### 5.4 Validation, rate limiting, abuse
+- Server-side validation and sanitisation of every input (same approach as Phase 1), plus database `CHECK` constraints (non-negative amounts, `ends_at > starts_at`, capacity > 0, valid enums).
+- Limits kept in the database (`rate_events`): booking creation per user per hour, "I've paid" per booking, password-reset requests per email and IP, signup per IP. Supabase also rate-limits auth endpoints itself.
+- Max 3 open unpaid bookings per member, so a person cannot hoard seats by repeatedly booking and not paying.
+- Email verification required before booking (emergency fallback switch in 3A.6). Password reset is always email-verified. A CAPTCHA at signup is **not** planned (we removed Turnstile in Phase 1); we add one only if bot signups appear.
+- Generic error messages for login and reset (do not reveal whether an email exists). Passwords: minimum 10 characters; Supabase hashes them.
+
+### 5.5 Overnight privacy rules
+- `overnight_location_private` and house rules are in a table column that no public or member query can read. A function `get_overnight_details(booking_id)` returns them only if the caller owns that booking **and** its status is paid and confirmed (or Admin/Staff). Never in page HTML for anyone else, never in emails before confirmation, never in any public API.
+- No file upload fields anywhere in the booking or account flow, no storage bucket for IDs. This is checked in review and in the test checklist.
+
+### 5.6 Admin protection
+- Staff cannot reach settings, users, audit log or bank details: enforced in RLS and in server code, not only by hiding menu items.
+- Only an Admin can call `set_user_role()`. An Admin cannot demote or deactivate the **last** remaining Admin (database check).
+- 2FA (TOTP) required for Admin and Staff accounts from milestone 2 onward.
+- Admin sessions time out after a period of inactivity; login attempts are rate-limited.
+
+### 5.7 Audit trail
+Every Admin/Staff mutation writes `audit_log` in the same transaction as the change (so a change cannot happen without a log row). Logged: login of privileged users, booking confirm/reject/cancel/approve, every settings change with before/after values, role changes, user deactivation, data deletion/export, bank-detail changes (flagged high-visibility, with an email to the owner whenever bank details change, to catch account takeover and payment-redirect fraud).
+
+### 5.8 NDPA 2023 compliance and deletion
+- **Collected:** name, email, phone, the student flag, consent timestamps, and the 18+ confirmation. Nothing else. No ID documents ever.
+- **Right of access:** a "Download my data" button gives the member their profile and bookings as a file.
+- **Right to deletion:** a "Delete my account" request. On processing: the login and profile are removed, and booking and payment rows are **anonymised** (name, phone, notes removed; amounts, dates and references kept) so accounting records stay intact. A purely deleted payment trail could cause problems for the Foundation's financial records.
+- **Retention:** 12 months after the booking end date, a scheduled job anonymises or deletes the personal data. Whether financial records must be kept longer under Nigerian law is a question for the Foundation's accountant or lawyer (Q10); the job's period is a single setting so it can change without code.
+- **Privacy policy and terms must be updated before launch** (Supabase becomes a data processor outside Nigeria, and Google carries our emails while the Gmail bridge is in use; account data and booking data are listed; cookies now include a login session cookie, which changes the current "only light/dark and announcement bar" cookie statement).
+- Data breach procedure (72-hour notice to the Nigeria Data Protection Commission) is written into the launch checklist.
+
+---
+
+## 6. Milestones
+
+Each milestone is built on `phase-2`, tested on a Vercel preview deployment of that branch pointing at the **development** Supabase project, and starts only after you approve it. Phase 1 pages and forms stay untouched until milestone 8.
+
+### M1. Login and an empty admin area (with the email bridge)
+- Create the Supabase development project (you do this, section 8); connect env vars locally and in Vercel preview.
+- **Email bridge:** the single `sendEmail()` function and the environment settings from 3A.5; Gmail SMTP connected both in the Supabase dashboard (verification, reset) and in the app environment. Supabase's built-in sender is not used. The `nodemailer` package is installed at this point, not before.
+- Database: `profiles` with `role`, RLS on, a trigger that creates the profile at signup; `set_user_role()` stub; first Admin created by you through a one-time SQL step (documented), never through the website.
+- Pages: Register, Verify email (with "Didn't get it? Check spam or resend" and a 60-second cooldown), Login, Logout, Forgot/Reset password, `/account` (name, phone, change password), `/admin` (empty dashboard that says who you are and your role). Admin/Staff/Member route guards in server code. `noindex` on all of them.
+- Header gets a Login / Account link only when the `accounts_enabled` flag is on, so the live look does not change.
+- Verification and reset email text written in the Foundation's warm tone and stored in the repo docs (Supabase keeps the live copy in its dashboard).
+- Privacy page: draft text for accounts and for Google as the email carrier, finalised at M8.
+
+### M2. People and safety foundation
+- Admin: Users page (list, create or promote Staff, demote, deactivate). Staff creation by Admin only. Last-Admin protection.
+- `audit_log` table, written for every role change, plus the Audit log viewer.
+- Required 2FA for Admin and Staff.
+- Rate-limit table and helper.
+- `email_log` table and the Email health page (sent/failed, daily-cap warning).
+
+### M3. Settings (the admin control panel)
+- Tables: `spaces`, `opening_hours`, `prices`, `settings`, `bank_details` with seed rows (day desks 30, opening 08:00, closing 18:00, everything priced left blank until you decide).
+- Admin Settings pages: Hours, Capacity, Pricing (hour, day, month, optional half day; overnight night and optional month; no weekly), Students, Bank details, Booking rules (including monthly pass rules and `require_verified_email`). Every save audited; bank-detail changes email the owner.
+- Public read: a small component that shows opening hours, desk count, "Free for students" (only if on) and prices (or "Contact us for pricing", or nothing for the optional half-day and overnight-month options) on Tech & Space. **Behind the `booking_enabled` flag, off by default**, so the live site does not change.
+
+### M4. Day workspace booking: hour, half day, day (create, hold, expire)
+- `bookings`, `booking_slots`, `create_booking()` with capacity locking, holds, price snapshot, reference.
+- Member pages: choose date and slot, availability counts, My bookings (list and detail), self-cancel within the cutoff rule.
+- `pg_cron` expiry; reminder email; "booking created" email with placeholders for bank details.
+- Concurrency and double-booking tests.
+
+### M5. Bank-transfer flow
+- Pay screen with bank details from the database and the reference/amount/countdown. "I've paid" button with optional transfer reference.
+- `payments` table; Admin/Staff Payment queue and Bookings page with confirm, reject (reason), cancel, no-show; "Message on WhatsApp" button; all emails; failed-email retry job.
+- Free-for-students path (hour, half day, day only; staff review).
+- End-to-end test with real bank transfers of a small amount.
+
+### M6. Monthly desk pass
+- `month` option on the day space: start-date picker, the two capacity tests (free desks and the pass cap), generated slot rows, "Your pass covers this day" rule, start-date shift on late confirmation, Admin extend, cancellation and "refund owed" list, Monthly passes admin page, renewal button and reminders.
+- Concurrency test specific to passes and the cap.
+
+### M7. Overnight workspace
+- 18+ checkbox, `pending_approval` -> approve/reject screen for staff, then payment, then private location reveal.
+- Overnight capacity per night; `overnight_max_nights`; house rules text; optional monthly bed (only if its price is set).
+- Explicit test that no page, API response or email leaks the location early, and that no upload field exists.
+
+### M8. Hardening, NDPA and launch
+- Download my data, delete my account, retention job, final privacy/terms/NDPR text (including Supabase and Google as processors, and the new login cookie), cookie statement update.
+- Load and concurrency tests, accessibility check, dark mode check, PageSpeed check (target stays 99 mobile), Nigerian-network testing on a phone.
+- Backups confirmed (Pro plan), production Supabase project, Vercel production env vars, owner sign-off, then your explicit approval to merge `phase-2` into `main` (CLAUDE.md currently forbids this, so it will be updated at that point). Booking calls to action replace the request forms only after the system has passed testing; the old forms remain as the fallback via the `booking_enabled` flag.
+- **Resend switch-over (configuration only, any time after the domain is verified):** the checklist in 3A.5. It can happen before or after launch and needs no code change.
+
+---
+
+## 7. Test checklist per milestone
+
+**M1**
+- Register with a new email: verification email arrives at a real **customer-style inbox**: test Gmail, Yahoo and Outlook addresses, and record whether each landed in inbox or spam. The link logs in.
+- Supabase's built-in sender is confirmed off (the verification mail arrives from the Gmail sender, and works for an address that is not a Supabase team member).
+- Unverified account cannot reach `/account`, cannot book.
+- Wrong password gives a generic error; reset-password email works end to end.
+- A Member visiting `/admin` is refused. A signed-out visitor is redirected to login.
+- A Member cannot change their own `role` (try through the browser console and the API).
+- Sender switch check: change `EMAIL_FROM` in the environment and see the next booking-style test email use it; confirm no credential appears in the repo, page source or logs.
+- Phase 1: all existing pages and every request form still work; Lighthouse mobile score unchanged (99); dark mode on the new pages.
+- `.env.local` and all keys absent from git; build and lint pass.
+
+**M2**
+- Only an Admin sees the Users page; Staff cannot create or promote anyone (UI and direct API).
+- Cannot demote or deactivate the last Admin.
+- Every role change appears in the audit log with who, when, before and after; nobody can edit or delete a log row.
+- Admin and Staff are forced to set up 2FA.
+- Email health shows sent and failed counts correctly and warns when the daily cap share is exceeded (simulate with a low `EMAIL_DAILY_CAP`).
+
+**M3**
+- Admin edits each setting; the public page shows the new value within seconds with no deploy.
+- Staff cannot read or change settings or bank details (try direct API calls).
+- Blank hour, day, month or night price shows "Contact us for pricing" (never empty, never 0). Blank half-day price or blank overnight-month price hides that option completely (search page source).
+- There is no weekly price field anywhere (admin, form, page source).
+- "Free for students" off: the phrase appears nowhere (search page source). On: it shows.
+- Closed weekday and different weekday hours behave correctly; times are in Lagos time.
+- Bank-detail change sends the owner an email and an audit row.
+
+**M4**
+- 30 members book the same hour: all succeed; the 31st sees "No longer available".
+- Two people book the last desk at the exact same moment: only one succeeds (scripted concurrency test, repeated many times).
+- Booking outside opening hours, on a closed day, in the past or beyond the advance window is refused (including by crafted requests).
+- Half-day option appears only when its price is set.
+- Hold expires after the configured time; seats free; late "I've paid" on an expired booking is handled as designed.
+- A member cannot see or cancel another member's booking (RLS tested with two accounts).
+- Price snapshot: change the price after booking; the existing booking keeps its old amount.
+- A fourth open unpaid booking is refused.
+
+**M5**
+- Booking created email contains correct bank details, amount, reference, deadline.
+- "I've paid" pressed twice changes nothing extra; admin receives one notification.
+- Staff confirm and reject both work; customer gets the right email each time; rejected seats are freed.
+- Wrong or missing reference path: admin can look up by name, phone, amount, date.
+- Staff cannot reach bank detail editing; an Admin edit of the bank account shows up for customers immediately.
+- Free-for-students flow and its staff review rule behave as decided; it is refused for monthly and overnight options.
+- "Message on WhatsApp" opens WhatsApp with the right reference and amount and no other personal data in the link beyond the number.
+- Real small transfer tested end to end.
+
+**M6**
+- With `monthly_pass_max_desks` set to 2: two passes succeed for the same start date; the third is refused and the next available start date is offered.
+- A pass and 28 hourly bookings fill all 30 desks in a slot; the next hourly booking is refused.
+- Pass holder cannot create an hourly or daily booking on a covered day.
+- A pass spans exactly 30 calendar days from the start date, in Lagos time, including closed days; an Admin extension is audited.
+- Late confirmation after the start date moves the start to the confirmation day; an Admin override needs a reason and is audited.
+- Cancellation rules: free before payment; self-cancel works until the 48-hour cutoff and flags "refund owed"; blocked after the cutoff and after the start.
+- Changing opening hours after a pass is sold regenerates future slots and warns if any hour overfills.
+- Renewal starts the day after the end and re-checks capacity. Concurrency test: simultaneous pass bookings for the last allowed pass slot, only one succeeds.
+- The pass shows no price when `month` is blank ("Contact us for pricing").
+
+**M7**
+- No 18+ tick: cannot request overnight. No upload field anywhere (inspect page and network).
+- Location text is absent from HTML, API responses and emails until payment is confirmed; a second member and a signed-out visitor never get it.
+- Approval, rejection, and capacity per night all work; approving does not exceed capacity. Bookings longer than `overnight_max_nights` are refused.
+- Overnight monthly bed is hidden when its price is blank, behaves like 3.8 when set, and is never free for students.
+
+**M8**
+- Download-my-data returns only that member's data.
+- Delete my account: login gone, bookings anonymised, accounting amounts intact, audit entry written.
+- Retention job removes/anonymises test records older than the period.
+- Restore from a backup is rehearsed once.
+- Full flow on a real phone over a slow connection; PageSpeed mobile still high; dark mode everywhere.
+- Rollback plan works: setting `booking_enabled` to false returns the site to the Phase 1 request forms.
+- Emergency fallback rehearsed: switching `require_verified_email` off allows booking with staff phone confirmation; password reset for unverified accounts is blocked.
+- Resend switch-over rehearsed on the development project with the checklist from 3A.5 (once the domain is available).
+
+---
+
+## 8. What I need from you
+
+**Accounts and setup (you, not me):**
+1. A **Supabase** account and two projects (development, production later). Share only the project URL and anon key through Vercel env vars; **never paste the service-role key or any app password into chat**.
+2. A **dedicated Gmail account** for sending (suggested display name "Rafael Support Foundation"; pick the address). Turn on 2-Step Verification, add a recovery phone and email you control, and create an **app password**. You enter that app password yourself in Supabase (Auth, SMTP) and in Vercel (`SMTP_PASS`). Tell me when it is ready, never the password itself.
+3. **Answer: do you still have a login for any mailbox on rafaelsupportfoundation.org (for example info@ hosted by GoDaddy)?** If yes, option C1 gives a more official sender than Gmail and may replace it.
+4. Optional: decide whether to **buy a small separate domain for email** (option C2) if Gmail testing in M1 shows poor deliverability.
+5. Confirm your **Vercel** plan (Hobby vs Pro) given payments are involved.
+6. **Resend domain (deferred, about two months):** when GoDaddy DNS access is back, add Resend's DNS records and create `info@`. Until then Resend stays as it is for the Phase 1 forms (which only email you). The switch-over steps are in 3A.5.
+7. The **admin email** that will be the first Admin, and an inbox for admin notifications (can reuse `FORMS_TO_EMAIL`).
+8. Decide the **monthly desk cap** (how many of the 30 desks passes may hold) and an **admin WhatsApp number** for click-to-chat (already stored for the site WhatsApp link).
+
+**Environment variables to add in Vercel (later, by you):** `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` (server only), `EMAIL_PROVIDER` (`smtp` now, `resend` later), `EMAIL_FROM`, `EMAIL_REPLY_TO`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` (server only), `EMAIL_DAILY_CAP`, `NEXT_PUBLIC_ACCOUNTS_ENABLED`. Production and Preview get different Supabase values. Existing `RESEND_API_KEY`, `FORMS_TO_EMAIL`, `FORMS_FROM_EMAIL` keep their current role.
+
+**Decisions needed** (recommended defaults in brackets, so you can answer "default" to any):
+- Q1. Decided: closing 6:00 PM, opening 8:00 AM. Still to confirm: which weekdays are closed (editable later in admin).
+- Q2. Decided: 2-hour hold.
+- Q3. **What "half day" means**, if you use a half-day price (default: morning = opening to 1:00 PM, afternoon = 1:00 PM to closing). Leaving the price blank hides the option.
+- Q4. Decided: overnight team approves in person first, then the person pays.
+- Q5. Decided: staff review each free-for-students booking first.
+- Q6. **Can Staff approve overnight requests**, or only Admin (default: Staff can).
+- Q7. **Cancellation and refund policy** in plain words (defaults: single bookings self-cancel until 24 hours before; monthly pass until 48 hours before its start; all refunds handled by hand).
+- Q8. **Booking window** (default: 30 days ahead for single bookings, 14 for a monthly pass start) and **max hours per booking** (default: 10).
+- Q9. **Overnight check-in and check-out times**, house rules text, and the **longest single overnight stay** (default: 7 nights).
+- Q10. Whether the Foundation's accountant needs **financial records kept longer than 12 months** (default: 12 months, then anonymise).
+- Q11. Wording for the **Terms of use** of booking (no-shows, behaviour, liability); I will draft, your lawyer should review.
+- Q12. **Monthly pass:** 30 consecutive calendar days from the start date (default) or 30 open days? Maximum desks passes may hold at once (default 10 of 30)? Free-for-students never applies to the monthly pass (default yes)?
+- Q13. **Overnight monthly price:** offer a monthly bed at all? (default: not at launch; leave the price blank and it stays hidden).
+- Q14. Whether you accept the **Gmail bridge's limits** (about 500 emails a day, gmail.com sender address, some spam-folder risk) for the first two months (recommended), or prefer to buy a separate email domain (option C2) or use a company mailbox (C1).
+
+Out of scope for this plan (listed in CLAUDE.md as Phase 2 but later): courses/LMS, quizzes and certificates, consulting payments, SMS. They reuse the same accounts and admin area, so nothing here blocks them. SMS one-time codes (option B) are not part of this plan.
+
+---
+
+*End of draft v2. No application code has been written and no packages installed.*
