@@ -320,6 +320,17 @@ No email address or password is written in this file or in any committed file. A
   2. In the **sender** Gmail account, set up **forwarding** of incoming mail to the requests inbox (Gmail Settings, Forwarding; Google asks the requests inbox to confirm). Replies to verification emails then reach the team.
   3. Optionally turn on a short **auto-reply** (vacation responder) in the sender account pointing people to the Contact page.
 
+### 3A.8 Measured deliverability and the launch requirement (decided by the owner)
+**Measured in M1 testing (Gmail SMTP bridge):** the verification email reached Gmail inboxes, but on **Yahoo and Outlook it landed in spam, instantly, with the correct sender name**. This is the spam-folder risk named in 3A.2. It is acceptable while the system is being built and tested, but **it is not acceptable for real customers**, many of whom use Yahoo or Outlook addresses.
+
+**LAUNCH REQUIREMENT:** before the booking system is opened to the public, a **verified sending domain** must be in place (Resend with `rafaelsupportfoundation.org`, SPF and DKIM passing, a DMARC record published), and the switch-over checklist in 3A.5 must be completed. **The Gmail bridge is for development and testing only and must not be the production sender.** If the main domain's DNS is still unavailable at that point, the fallback is option C2 (a small separate email-only domain verified in Resend) or option C1 (a mailbox on the main domain), never Gmail alone.
+
+**Launch gate (all must pass, tested on Gmail, Yahoo and Outlook inboxes):**
+1. Verification, password-reset and booking emails arrive in the **inbox** (not spam) on all three providers.
+2. SPF, DKIM and DMARC show "pass" in the message headers.
+3. The sender is the Foundation's own domain, and Reply-To works.
+4. The Resend daily limit for the chosen plan covers expected volume (check the plan; the free plan's daily cap is low).
+
 ---
 
 ## 4. Admin panel pages
@@ -453,6 +464,7 @@ Each milestone is built on `phase-2`, tested on a Vercel preview deployment of t
 - Explicit test that no page, API response or email leaks the location early, and that no upload field exists.
 
 ### M8. Hardening, NDPA and launch
+- **Launch gate: email domain verification (3A.8).** Booking is not opened to the public until Resend (or the fallback in 3A.8) sends from a verified domain and the Gmail, Yahoo and Outlook inbox test passes.
 - Download my data, delete my account, retention job, final privacy/terms/NDPR text (including Supabase and Google as processors, and the new login cookie), cookie statement update.
 - Load and concurrency tests, accessibility check, dark mode check, PageSpeed check (target stays 99 mobile), Nigerian-network testing on a phone.
 - Backups confirmed (Pro plan), production Supabase project, Vercel production env vars, owner sign-off, then your explicit approval to merge `phase-2` into `main` (CLAUDE.md currently forbids this, so it will be updated at that point). Booking calls to action replace the request forms only after the system has passed testing; the old forms remain as the fallback via the `booking_enabled` flag.
@@ -546,7 +558,7 @@ Each milestone is built on `phase-2`, tested on a Vercel preview deployment of t
 3. **Decided:** `info@rafaelsupportfoundation.org` is not used for now. Reply-To is the requests inbox, set by `REPLY_TO_EMAIL`. Changing Reply-To to info@ later is an environment change.
 4. Optional: decide whether to **buy a small separate domain for email** (option C2) if Gmail testing in M1 shows poor deliverability.
 5. Confirm your **Vercel** plan (Hobby vs Pro) given payments are involved.
-6. **Resend domain (deferred, about two months):** when GoDaddy DNS access is back, add Resend's DNS records and create `info@`. Until then Resend stays as it is for the Phase 1 forms (which only email you). The switch-over steps are in 3A.5.
+6. **LAUNCH REQUIREMENT, Resend domain verification (deferred, about two months):** when GoDaddy DNS access is back, add Resend's DNS records (SPF, DKIM and a DMARC record), verify `rafaelsupportfoundation.org`, and create `info@`. **Booking does not go public until this is done**, because Yahoo and Outlook put the Gmail-sent emails in spam in testing (3A.8). Until then Resend stays as it is for the Phase 1 forms (which only email you). The switch-over steps are in 3A.5. If DNS access cannot be restored in time, tell me and we use option C2 or C1 instead.
 7. The **admin email** that will be the first Admin, and an inbox for admin notifications (can reuse `FORMS_TO_EMAIL`).
 8. Decide the **monthly desk cap** (how many of the 30 desks passes may hold) and an **admin WhatsApp number** for click-to-chat (already stored for the site WhatsApp link).
 
@@ -583,3 +595,5 @@ Out of scope for this plan (listed in CLAUDE.md as Phase 2 but later): courses/L
 - Monthly pass: 30 calendar days, stated clearly on the website. Desk cap 10 of 30, editable by Admin.
 - Opening hours default: 8:00 AM to 6:00 PM, Monday to Saturday, closed Sunday (editable by Admin).
 - The phase-2 branch is pushed to origin (phase-2 only, never main).
+- M1 test results (owner): login, logout and password reset pass; an unverified account is blocked from `/account`; a Member cannot change their own role (permission denied) and sees only their own profile row; `/admin` is a 404 for a Member and a login redirect when signed out; the Vercel preview registration works. Yahoo and Outlook verification emails land in spam (Gmail inbox).
+- **Launch requirement added:** a verified email sending domain is required before booking opens to the public (3A.8, M8 launch gate, section 8 item 6).
