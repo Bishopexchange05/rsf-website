@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useId, useState } from "react";
+import { useActionState, useEffect, useId, useState } from "react";
 import { useFormStatus } from "react-dom";
 import {
   changePasswordAction,
@@ -15,6 +15,7 @@ import {
 } from "@/lib/auth-actions";
 import { passwordProblem } from "@/lib/auth-validation";
 import { account, common, errors, fields, forgot, login, register, reset, verifyEmail } from "@/content/accounts";
+import { cooldownKey, useCooldown } from "./useCooldown";
 
 const inputClass =
   "min-h-12 w-full rounded-xl border border-slate-navy/25 bg-white px-4 py-3 text-slate-navy placeholder:text-slate-navy/50 dark:border-white/25 dark:bg-dark-bg dark:text-dark-text dark:placeholder:text-dark-text/50 aria-[invalid=true]:border-accent-red dark:aria-[invalid=true]:border-accent-red aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-accent-red/40";
@@ -207,8 +208,34 @@ export function LoginForm() {
 
 // ------------------------------------------------- verify email (resend)
 
+// A submit button that waits out the countdown. The label changes every second
+// but the screen-reader announcement (CooldownStatus) happens once, at the end.
+function CooldownButton({ label, remaining }: { label: string; remaining: number }) {
+  const { pending } = useFormStatus();
+  const waiting = remaining > 0;
+  return (
+    <button type="submit" disabled={pending || waiting} className={buttonClass}>
+      {pending ? common.sending : waiting ? verifyEmail.waiting(remaining) : label}
+    </button>
+  );
+}
+
+function CooldownStatus({ announce }: { announce: boolean }) {
+  return (
+    <p role="status" aria-live="polite" className="sr-only">
+      {announce ? verifyEmail.available : ""}
+    </p>
+  );
+}
+
 export function ResendForm({ email }: { email: string }) {
   const [state, action] = useActionState(resendVerificationAction, empty);
+  // The first email was sent a moment ago (we only know the address then), so
+  // the countdown starts as soon as the page opens.
+  const { remaining, justFinished, restart } = useCooldown(cooldownKey("verify-sent", email), !!email);
+  useEffect(() => {
+    if (state.success) restart();
+  }, [state, restart]);
   return (
     <form action={action} className="space-y-4">
       <FormMessage error={state.error} success={state.success ? verifyEmail.resent : undefined} />
@@ -217,8 +244,9 @@ export function ResendForm({ email }: { email: string }) {
       ) : (
         <Field name="email" label={fields.email.label} type="email" autoComplete="email" inputMode="email" defaultValue={state.values?.email} />
       )}
-      <SubmitButton label={verifyEmail.resend} />
-      <p className="text-sm opacity-75">{verifyEmail.resendCooldown}</p>
+      <CooldownButton label={verifyEmail.resend} remaining={remaining} />
+      {remaining > 0 && <p className="text-sm opacity-75">{verifyEmail.countdownNote}</p>}
+      <CooldownStatus announce={justFinished} />
     </form>
   );
 }
@@ -227,11 +255,19 @@ export function ResendForm({ email }: { email: string }) {
 
 export function ForgotPasswordForm() {
   const [state, action] = useActionState(forgotPasswordAction, empty);
+  // No email has been sent yet when the page opens, so no countdown until the first send.
+  const { remaining, justFinished, restart } = useCooldown(cooldownKey("forgot-sent"), false);
+  useEffect(() => {
+    if (state.success) restart();
+  }, [state, restart]);
+  const sentBefore = !!state.success || remaining > 0;
   return (
     <form action={action} className="space-y-5" noValidate>
       <FormMessage error={state.error} success={state.success ? forgot.sent : undefined} />
       <Field name="email" label={fields.email.label} type="email" autoComplete="email" inputMode="email" defaultValue={state.values?.email} error={state.fieldErrors?.email} />
-      <SubmitButton label={forgot.submit} />
+      <CooldownButton label={sentBefore ? forgot.resend : forgot.submit} remaining={remaining} />
+      {remaining > 0 && <p className="text-sm opacity-75">{forgot.countdownNote}</p>}
+      <CooldownStatus announce={justFinished} />
     </form>
   );
 }

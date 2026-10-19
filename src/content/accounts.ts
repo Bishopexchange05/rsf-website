@@ -72,12 +72,13 @@ export const login = {
 export const verifyEmail = {
   title: "Check your email",
   heading: "Check your email",
-  textWithEmail: (email: string) =>
-    `We have sent a link to ${email}. Open it to verify your email address. Then you can log in.`,
+  textWithEmail: (email: string) => `We've sent a verification link to ${email}.`,
   textNoEmail: "Enter your email address and we will send you a new verification link.",
-  spam: "Cannot see it? Check your spam or junk folder. Emails from us can take a few minutes to arrive.",
+  body: "Open the email and select Verify my email. If you can't find it in your inbox, check your spam or junk folder.",
   resend: "Send the link again",
-  resendCooldown: "You can ask for another email in a minute.",
+  waiting: (seconds: number) => `Send the link again in ${seconds}s`,
+  countdownNote: "You can request a new link when the countdown ends.",
+  available: "You can now request a new link.",
   resent: "If that address is waiting to be verified, we have sent a new link.",
   help: "Still stuck? Please use our",
 };
@@ -101,6 +102,8 @@ export const forgot = {
   text: "Enter your email address and we will send you a link to choose a new password.",
   submit: "Send reset link",
   sent: "If there is an account for that address, we have sent a link to reset the password. Check your spam folder if it does not arrive.",
+  resend: "Send the link again",
+  countdownNote: "You can request a new link when the countdown ends.",
   back: { label: "Back to log in", href: "/login" },
 };
 

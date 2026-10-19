@@ -15,7 +15,7 @@ export default async function Page() {
   const email = await readPendingEmail();
   return (
     <AuthPage heading={verifyEmail.heading} text={email ? verifyEmail.textWithEmail(email) : verifyEmail.textNoEmail}>
-      <p className="mb-6 opacity-85">{verifyEmail.spam}</p>
+      {email && <p className="mb-6 opacity-85">{verifyEmail.body}</p>}
       <ResendForm email={email} />
       <p className="mt-6 text-sm">
         {verifyEmail.help}{" "}
