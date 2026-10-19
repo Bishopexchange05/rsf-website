@@ -3,8 +3,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AuthPage } from "@/components/auth/AuthPage";
 import { ChangePasswordForm, ProfileForm } from "@/components/auth/AuthForms";
-import { account } from "@/content/accounts";
-import { requireUser } from "@/lib/auth";
+import { RegenerateCodes } from "@/components/auth/TwoFactorForms";
+import { account, twoFactor } from "@/content/accounts";
+import { getAal, needsTwoFactor, requireUser } from "@/lib/auth";
+import { countUnusedRecoveryCodes } from "@/lib/mfa";
+import { adminConfigured, createAdminClient } from "@/lib/supabase/admin";
 import { signOutAction } from "@/lib/auth-actions";
 import { noIndex } from "@/lib/no-index";
 import { accountsEnabled } from "@/lib/supabase/config";
@@ -16,7 +19,10 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ n
   const { user, profile } = await requireUser();
   const { notice } = await searchParams;
   const message = notice ? account.notices[notice] : undefined;
-  const staffOrAdmin = profile.role === "admin" || profile.role === "staff";
+  const staffOrAdmin = needsTwoFactor(profile.role);
+  const aal = staffOrAdmin ? await getAal() : null;
+  const enrolled = aal?.next === "aal2";
+  const codesLeft = enrolled && adminConfigured() ? await countUnusedRecoveryCodes(createAdminClient(), user.id) : null;
   return (
     <AuthPage heading={account.heading} text={account.text}>
       {message && (
@@ -43,6 +49,22 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ n
       <div className="mt-4">
         <ChangePasswordForm />
       </div>
+
+      {staffOrAdmin && (
+        <>
+          <h2 className="mt-10 text-h3">{twoFactor.account.heading}</h2>
+          <div className="mt-4 space-y-3">
+            <p>{enrolled ? twoFactor.account.on : twoFactor.account.off}</p>
+            {!enrolled && (
+              <Link href={twoFactor.account.setupLink.href} className="font-medium underline underline-offset-2">
+                {twoFactor.account.setupLink.label}
+              </Link>
+            )}
+            {enrolled && codesLeft !== null && <p className="text-sm">{twoFactor.account.codesLeft(codesLeft)}</p>}
+            {enrolled && aal?.current === "aal2" && <RegenerateCodes />}
+          </div>
+        </>
+      )}
 
       {staffOrAdmin && (
         <p className="mt-8 text-sm">

@@ -40,11 +40,38 @@ export async function requireUser(): Promise<Session> {
   return session;
 }
 
+export type Aal = { current: string | null; next: string | null };
+
+// How strongly this session has been verified: aal1 = password only, aal2 =
+// password plus a code from the authenticator app. "next" is aal2 when the
+// person has an authenticator set up.
+export async function getAal(): Promise<Aal> {
+  const supabase = await createClient();
+  const { data } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+  return { current: data?.currentLevel ?? null, next: data?.nextLevel ?? null };
+}
+
+export function needsTwoFactor(role: Role): boolean {
+  return role === "admin" || role === "staff";
+}
+
+// Where a password-only session must go next: the code page if an
+// authenticator is set up, otherwise the setup page.
+export async function twoFactorPath(): Promise<string> {
+  const aal = await getAal();
+  return aal.next === "aal2" ? "/two-factor" : "/two-factor/setup";
+}
+
 // Role-restricted pages. Signed-out visitors go to login; signed-in people
 // without the role get a plain "not found" page (it does not reveal that the
-// page exists).
+// page exists). Staff and Admin must also have passed the authenticator-app
+// check in this session, otherwise they are sent to set it up or enter a code.
 export async function requireRole(roles: Role[]): Promise<Session> {
   const session = await requireUser();
   if (!roles.includes(session.profile.role)) notFound();
+  if (needsTwoFactor(session.profile.role)) {
+    const aal = await getAal();
+    if (aal.current !== "aal2") redirect(await twoFactorPath());
+  }
   return session;
 }

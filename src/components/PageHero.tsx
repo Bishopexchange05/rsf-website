@@ -7,6 +7,7 @@ export function PageHero({
   heading,
   text,
   image,
+  compact = false,
   children,
 }: {
   id?: string;
@@ -14,6 +15,8 @@ export function PageHero({
   heading: string;
   text: string;
   image: { src: string; alt: string };
+  // Shorter banner for working pages (admin). Public pages leave this off.
+  compact?: boolean;
   children?: React.ReactNode;
 }) {
   return (
@@ -22,7 +25,7 @@ export function PageHero({
         <Image src={image.src} alt={image.alt} fill priority sizes="100vw" className="object-cover" />
         <div className="absolute inset-0 bg-gradient-to-br from-navy/85 to-purple/80 dark:from-dark-bg/90 dark:to-purple-panel/85" />
       </div>
-      <div className="mx-auto max-w-6xl px-4 pb-16 pt-8 sm:px-6 md:pb-24 md:pt-12 lg:pb-28">
+      <div className={compact ? "mx-auto max-w-6xl px-4 pb-8 pt-4 sm:px-6 md:pb-10 md:pt-6" : "mx-auto max-w-6xl px-4 pb-16 pt-8 sm:px-6 md:pb-24 md:pt-12 lg:pb-28"}>
         <div className="max-w-3xl">
           <p className="font-heading text-base uppercase tracking-widest text-brand-green dark:text-dark-green">
             {label}

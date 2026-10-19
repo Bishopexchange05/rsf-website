@@ -2,11 +2,12 @@
 
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { requireUser } from "@/lib/auth";
+import { getAal, getSession, needsTwoFactor, requireUser } from "@/lib/auth";
 import { cleanEmail, isValidEmail, passwordProblem } from "@/lib/auth-validation";
 import { normalizeNigerianPhone, sanitize } from "@/lib/forms";
 import { PENDING_COOKIE, readPendingEmail } from "@/lib/pending-email";
-import { clientIpFromHeaders, rateLimitedWith } from "@/lib/rate-limit";
+import { clientIpFromHeaders } from "@/lib/rate-limit";
+import { limited } from "@/lib/rate-limit-db";
 import { getSiteOrigin } from "@/lib/site-origin";
 import { createClient } from "@/lib/supabase/server";
 import { errors, common } from "@/content/accounts";
@@ -72,7 +73,7 @@ export async function registerAction(_prev: ActionState, fd: FormData): Promise<
   if (!terms) fieldErrors.terms = errors.terms;
   if (Object.keys(fieldErrors).length) return { fieldErrors, values, error: common.fixFields };
 
-  if (rateLimitedWith(`signup:${await ip()}`, 5, TEN_MIN)) {
+  if (await limited(`signup:${await ip()}`, 5, TEN_MIN)) {
     return { error: common.tooMany, values };
   }
 
@@ -108,7 +109,7 @@ export async function loginAction(_prev: ActionState, fd: FormData): Promise<Act
   if (!isValidEmail(email) || !password) return { error: errors.badLogin, values };
 
   const who = await ip();
-  if (rateLimitedWith(`login:${who}:${email}`, 8, TEN_MIN) || rateLimitedWith(`login-ip:${who}`, 40, TEN_MIN)) {
+  if (await limited(`login:${who}:${email}`, 8, TEN_MIN) || await limited(`login-ip:${who}`, 40, TEN_MIN)) {
     return { error: common.tooMany, values };
   }
 
@@ -122,6 +123,13 @@ export async function loginAction(_prev: ActionState, fd: FormData): Promise<Act
     // One message for a wrong password and an unknown address.
     return { error: errors.badLogin, values };
   }
+  // Staff and Admin must pass the authenticator step; so must anyone who has one set up.
+  const session = await getSession();
+  const aal = await getAal();
+  if (session && needsTwoFactor(session.profile.role)) {
+    redirect(aal.next === "aal2" ? "/two-factor" : "/two-factor/setup");
+  }
+  if (aal.next === "aal2" && aal.current !== "aal2") redirect("/two-factor");
   redirect("/account");
 }
 
@@ -137,7 +145,7 @@ export async function resendVerificationAction(_prev: ActionState, fd: FormData)
   const email = cleanEmail(text(fd, "email")) || (await readPendingEmail());
   if (!isValidEmail(email)) return { error: errors.email };
 
-  if (rateLimitedWith(`resend:${email}`, 1, 60 * 1000) || rateLimitedWith(`resend-ip:${await ip()}`, 10, TEN_MIN)) {
+  if (await limited(`resend:${email}`, 1, 60 * 1000) || await limited(`resend-ip:${await ip()}`, 10, TEN_MIN)) {
     return { error: errors.waitResend, values: { email } };
   }
 
@@ -161,7 +169,7 @@ export async function forgotPasswordAction(_prev: ActionState, fd: FormData): Pr
   if (!isValidEmail(email)) return { fieldErrors: { email: errors.email }, values: { email } };
 
   const who = await ip();
-  if (rateLimitedWith(`forgot:${email}`, 3, TEN_MIN) || rateLimitedWith(`forgot-ip:${who}`, 10, TEN_MIN)) {
+  if (await limited(`forgot:${email}`, 3, TEN_MIN) || await limited(`forgot-ip:${who}`, 10, TEN_MIN)) {
     return { error: common.tooMany, values: { email } };
   }
 

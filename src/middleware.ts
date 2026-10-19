@@ -17,5 +17,7 @@ export const config = {
     "/forgot-password",
     "/reset-password",
     "/auth/:path*",
+    "/two-factor/:path*",
+    "/two-factor",
   ],
 };
