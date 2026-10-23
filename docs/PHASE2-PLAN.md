@@ -12,7 +12,7 @@ First build: the booking calendar for the Day workspace and the Overnight worksp
 - Visitors must have a verified account to book. No guest booking.
 - Flow: pending payment (slot held, auto-expires) -> customer taps "I've paid" (optional transfer reference) -> admin checks the bank account and confirms -> customer emailed -> confirmed. Admin can reject or cancel. Every booking has a unique reference used as the transfer narration.
 - Overnight: 18+ (checkbox plus in-person check), team approval in person, never any ID document collected or stored, location shared only after approval.
-- Everything operational is editable from the admin panel: hours (per weekday, closed days), day desks (30), day prices (per hour, per day, per month; half day optional and hidden when empty; no weekly price), "Free for students" switch, overnight price (per night, optional per month), overnight capacity, bank details, hold time. A price that is not set shows "Contact us for pricing".
+- Everything operational is editable from the admin panel: hours (per weekday, closed days), day desks (30), day prices (per hour, per day, per month; half day optional and hidden when empty; no weekly price), optional student prices (per hour, per day, per month; the student day price starts at 1,000 naira), overnight price (per night, optional per month), overnight capacity, bank details, hold time. A price that is not set shows "Contact us for pricing".
 - Roles: Admin (everything), Staff (view bookings, confirm/reject payments, nothing else), Member (book, see own bookings). Only an Admin creates or promotes staff.
 - Emails go out through one configurable sender. Until the Resend domain is verified (about two months), the sender is a dedicated Gmail account over SMTP; switching to Resend later is a configuration change, not a code change (section 3A).
 - NDPA 2023: collect only name, email, phone; keep records 12 months unless law requires longer; deletion of a user's data must be possible.
@@ -90,20 +90,18 @@ Email lives in `auth.users` (not duplicated). Nothing else is collected (no date
 |---|---|---|
 | space_id | FK | |
 | kind | enum `hour` / `half_day` / `day` / `month` / `night` | **There is no weekly kind.** Day space uses `hour`, `half_day`, `day`, `month`. Overnight uses `night` and optionally `month` |
+| audience | text `standard` / `student` | **Student prices (decided 23 October 2026):** students are NOT free. They pay a lower, optional price. Student rows exist only for `hour`, `day` and `month`; blank means no student rate for that option |
 | amount_kobo | bigint null | null = not set |
 | updated_by, updated_at | | |
 
 How an empty price behaves (one rule per kind, applied everywhere on the site and in the booking form):
 - `hour`, `day`, `month` (day space) and `night` (overnight) are the core options. If empty, that option shows **"Contact us for pricing"** with a link to the contact page, and cannot be booked online. It never shows an empty or zero price.
 - `half_day` (day space) and `month` (overnight) are **optional**. If empty, the option is **hidden entirely**: not on the pricing display, not in the booking form, nowhere in the page source.
-- A price of exactly 0 is not allowed in this table; free access is handled only by the "Free for students" switch.
+- A price of exactly 0 is not allowed in this table. Nothing on the site is free. A student price can never be higher than the standard price for the same option, and the database enforces that.
 
 ### 2.5 `settings` (single row of business rules; typed columns, not free-form)
 | field | type | notes |
 |---|---|---|
-| free_for_students_enabled | boolean | when true the website shows "Free for students"; when false it is hidden entirely |
-| student_free_applies_to | text[] | which options can be free: default `hour`, `half_day`, `day`. **The monthly pass is never free** |
-| student_free_max_per_day | int | proposed 1 free booking per student per day, up to `max_hours_per_booking` |
 | hold_minutes | int | how long an unpaid booking holds its seats (decided: 120) |
 | claimed_review_hours | int | how long an "I've paid" booking can wait before it is flagged overdue for admin |
 | advance_booking_days | int | how far ahead people can book (proposed 30) |
@@ -137,8 +135,8 @@ Customers only see these after creating a booking (never on a public page).
 | starts_at, ends_at | timestamptz | hour/half_day/day: within one opening day; month: start date to start date + `monthly_pass_days`; overnight: nights as check-in/out |
 | seats | int | 1 for now (one person per booking). Kept as a column so group bookings can come later |
 | status | enum | see 3.1 |
-| amount_kobo | bigint | price **snapshot** at booking time, so later price changes never alter it. 0 for free-for-students |
-| is_free_student | boolean | booking used the student-free option |
+| amount_kobo | bigint | price **snapshot** at booking time (the standard or the student price that applied), so later price changes never alter it |
+| is_student_price | boolean | the member ticked "I am a student" and paid the student price. Student status is checked in person on arrival; no student ID is ever uploaded or stored |
 | confirmed_18_plus | boolean + `confirmed_18_plus_at` | overnight checkbox record |
 | hold_expires_at | timestamptz null | set while `pending_payment`; cleared once claimed |
 | approved_by, approved_at | | overnight in-person approval |
@@ -187,7 +185,7 @@ Terminal: `rejected`, `cancelled`, `expired`, `completed`, `no_show`.
 ### 3.2 Day workspace, step by step
 1. **Account:** visitor registers, verifies email, logs in. Unverified accounts cannot book (database function checks `email_confirmed_at`), unless the owner has switched `require_verified_email` off as an emergency fallback (3A.6).
 2. **Pick:** choose a date (open day, within `advance_booking_days`), then hourly slots, a full day, or a half day (offered only when a half-day price is set). Monthly passes are booked from a separate "Monthly pass" option (3.7). The page shows remaining desks per hour from a public, read-only availability function that returns **counts only**, never other people's data.
-3. **Price:** shown from `prices`. If an hour, day or month price is not set, that button becomes "Contact us for pricing" and no booking is created. An unset half-day price hides the half-day option entirely. If "Free for students" is on and the member ticked student, an eligible option shows as free (3.5).
+3. **Price:** shown from `prices`. If an hour, day or month price is not set, that button becomes "Contact us for pricing" and no booking is created. An unset half-day price hides the half-day option entirely. If a student price is set for the chosen option, the member can tick "I am a student" and pay the student price (3.5).
 4. **Create booking** (one database function, all-or-nothing):
    - lock the space row (`SELECT ... FOR UPDATE`), so two people cannot book the last desk at the same time;
    - check the member is verified, active, within limits (max 3 open `pending_payment` bookings, max hours, cutoff, opening hours, closed days);
@@ -214,11 +212,12 @@ Terminal: `rejected`, `cancelled`, `expired`, `completed`, `no_show`.
 5. The overnight capacity counts people per night. Check-in/out times come from settings. A single booking may be up to `overnight_max_nights`. Longer stays use the optional monthly bed (3.8), which is hidden unless an overnight monthly price is set.
 Why approve-before-pay: nobody pays and then gets refused in person. If you prefer pay-then-approve, only the order of two steps changes.
 
-### 3.5 Free for students
-- Admin switch `free_for_students_enabled`. **Off: the words "Free for students" appear nowhere on the site** and the booking option does not exist. On: it shows on the Tech & Space page and in the booking form.
-- It applies only to hourly, half-day and full-day day-space bookings (`student_free_applies_to`). **The monthly pass and anything overnight are never free.** Limit proposed: one free booking per student per day (`student_free_max_per_day`), so one account cannot take a desk for the whole month for nothing.
-- A member who ticks "I am a student" books with `amount_kobo = 0`, `is_free_student = true`. Student status is checked **in person on arrival** (they show a student ID to staff; we never upload or store it). Decided: staff review each free booking before it is confirmed.
-- Staff can mark a free booking `no_show` to track abuse; an Admin can remove a member's student flag.
+### 3.5 Student prices
+- **Replaces the earlier "Free for students" idea (decided 23 October 2026).** Students pay a lower price by bank transfer, exactly like everyone else. Nothing is free.
+- The Admin can enter a student price for each of per hour, per day and per month (all optional; blank means no student rate for that one). The starting value is **1,000 naira per day**. Everything is editable in Settings and every change is audited. A student price cannot be higher than the standard price for the same option.
+- When booking, a member ticks "I am a student" to get the student price. **Student status is checked in person on arrival** (they show a student ID to staff; we never upload or store it). If someone cannot show proof, staff collect the difference or decline entry; the booking admin screen (M5) will have a note for that.
+- Student rates exist only for the day workspace (hour, day, month). There is no student half-day price and no student rate for overnight.
+- With no free bookings, the abuse risk is small (the most anyone gains is the price difference), so there is no per-day limit and no staff review step for student bookings.
 
 ### 3.6 Emails sent
 Templates: verify email and password reset (sent by Supabase Auth through our SMTP, 3A), booking created (bank details, reference, hold deadline), hold expiring soon, "I've paid" received (customer), payment awaiting review (admin), confirmed, rejected (with reason), cancelled, expired, overnight approved (location only after payment is confirmed), reminder the day before, monthly pass starts tomorrow, monthly pass ends in 5 days (with a Renew link). Every email is also visible inside the member's account (My bookings), so a lost or filtered email never hides a booking. Failures are recorded in `email_log` and retried by a scheduled job; a failed email never blocks the booking. How the sender is configured is in 3A.
@@ -298,7 +297,7 @@ Staff confirm every booking only after seeing the money in the bank account, so 
 2. **Account takeover through password reset:** if the email on the account is not proven to belong to the person, whoever really owns that address could reset the password and see that person's bookings and phone number. This is the main reason **password reset must stay email-verified**.
 3. **Using the system to send mail to strangers:** signup with a victim's address would send them an email. Rate limits on signup and a verification-only first email limit this.
 4. **Desk hoarding with throwaway accounts:** limited by the 2-hour hold, the 3-unpaid-bookings cap and rate limits, and by staff only confirming paid bookings.
-5. **Student-free abuse:** the real check is the in-person student ID.
+5. **False student claims:** the most anyone gains is the price difference, and the real check is the in-person student ID on arrival.
 **Conclusion: the recommendation does not change.** Keep email verification required (Option A makes it affordable). The `require_verified_email` setting exists as an emergency fallback only: if Gmail is suspended or hits its cap, an Admin can switch it off and bookings continue, with staff confirming by phone or WhatsApp before approving, and password reset temporarily disabled for unverified accounts. Overnight always needs the in-person visit regardless.
 
 ### 3A.7 Sender, Reply-To and inboxes (decided by the owner)
@@ -348,7 +347,7 @@ Lives under `/admin` (not in the public nav, not in the sitemap, `noindex`). Log
 | Settings: Hours | yes | no | Per-weekday opening/closing, closed days |
 | Settings: Capacity | yes | no | Day desks, overnight capacity, bookable on/off per space |
 | Settings: Pricing | yes | no | Day space: per hour, per day, per month, optional half day. Overnight: per night, optional per month. Blank hour/day/month/night = "Contact us for pricing"; blank half day or overnight month = option hidden. No weekly price exists |
-| Settings: Students | yes | no | "Free for students" switch |
+| Settings: Student prices | yes | no | Part of the Prices page: optional student price for per hour, per day, per month (starting value 1,000 naira per day) |
 | Settings: Bank details | yes | no | Bank name, account number, account name, note |
 | Settings: Booking rules | yes | no | Hold time, advance days, max hours, cancellation cutoff, half-day definition, monthly pass length, monthly pass desk cap, monthly start window and cancel cutoff, overnight max nights and window, overnight location and house rules, require verified email, global booking on/off |
 | Users | yes | no | List members; create or promote **staff**; demote; deactivate; process a data-deletion request; student flag |
@@ -440,7 +439,7 @@ Each milestone is built on `phase-2`, tested on a Vercel preview deployment of t
 ### M3. Settings (the admin control panel)
 - Tables: `spaces`, `opening_hours`, `prices`, `settings`, `bank_details` with seed rows (day desks 30, opening 08:00, closing 18:00, Monday to Saturday open and Sunday closed, monthly pass desk cap 10, everything priced left blank until you decide).
 - Admin Settings pages: Hours, Capacity, Pricing (hour, day, month, optional half day; overnight night and optional month; no weekly), Students, Bank details, Booking rules (including monthly pass rules and `require_verified_email`). Every save audited; bank-detail changes email the owner.
-- Public read: a small component that shows opening hours, desk count, "Free for students" (only if on) and prices (or "Contact us for pricing", or nothing for the optional half-day and overnight-month options) on Tech & Space. **Behind the `booking_enabled` flag, off by default**, so the live site does not change.
+- Public read: a small component that shows opening hours, desk count and prices (or "Contact us for pricing", or nothing for the optional half-day and overnight-month options) and any student prices that are set, on Tech & Space. **Behind the `booking_enabled` flag, off by default**, so the live site does not change.
 
 ### M4. Day workspace booking: hour, half day, day (create, hold, expire)
 - `bookings`, `booking_slots`, `create_booking()` with capacity locking, holds, price snapshot, reference.
@@ -451,7 +450,7 @@ Each milestone is built on `phase-2`, tested on a Vercel preview deployment of t
 ### M5. Bank-transfer flow
 - Pay screen with bank details from the database and the reference/amount/countdown. "I've paid" button with optional transfer reference.
 - `payments` table; Admin/Staff Payment queue and Bookings page with confirm, reject (reason), cancel, no-show; "Message on WhatsApp" button; all emails; failed-email retry job.
-- Free-for-students path (hour, half day, day only; staff review).
+- Student price path: the "I am a student" tick uses the student price; staff check student status in person on arrival.
 - End-to-end test with real bank transfers of a small amount.
 
 ### M6. Monthly desk pass
@@ -497,7 +496,7 @@ Each milestone is built on `phase-2`, tested on a Vercel preview deployment of t
 - Staff cannot read or change settings or bank details (try direct API calls).
 - Blank hour, day, month or night price shows "Contact us for pricing" (never empty, never 0). Blank half-day price or blank overnight-month price hides that option completely (search page source).
 - There is no weekly price field anywhere (admin, form, page source).
-- "Free for students" off: the phrase appears nowhere (search page source). On: it shows.
+- Student prices: a blank student price shows no student rate for that option; a student price higher than the standard price is refused; the student day price starts at 1,000 naira and is editable and audited.
 - Closed weekday and different weekday hours behave correctly; times are in Lagos time.
 - Bank-detail change sends the owner an email and an audit row.
 
@@ -517,7 +516,7 @@ Each milestone is built on `phase-2`, tested on a Vercel preview deployment of t
 - Staff confirm and reject both work; customer gets the right email each time; rejected seats are freed.
 - Wrong or missing reference path: admin can look up by name, phone, amount, date.
 - Staff cannot reach bank detail editing; an Admin edit of the bank account shows up for customers immediately.
-- Free-for-students flow and its staff review rule behave as decided; it is refused for monthly and overnight options.
+- Student price flow: the tick applies the student price only to hour, day and month options, never to half day or overnight; the booking records that the student price was used.
 - "Message on WhatsApp" opens WhatsApp with the right reference and amount and no other personal data in the link beyond the number.
 - Real small transfer tested end to end.
 
@@ -536,7 +535,7 @@ Each milestone is built on `phase-2`, tested on a Vercel preview deployment of t
 - No 18+ tick: cannot request overnight. No upload field anywhere (inspect page and network).
 - Location text is absent from HTML, API responses and emails until payment is confirmed; a second member and a signed-out visitor never get it.
 - Approval, rejection, and capacity per night all work; approving does not exceed capacity. Bookings longer than `overnight_max_nights` are refused.
-- Overnight monthly bed is hidden when its price is blank, behaves like 3.8 when set, and is never free for students.
+- Overnight monthly bed is hidden when its price is blank and behaves like 3.8 when set. There is no student price for overnight.
 
 **M8**
 - Download-my-data returns only that member's data.
@@ -569,14 +568,14 @@ Each milestone is built on `phase-2`, tested on a Vercel preview deployment of t
 - Q2. Decided: 2-hour hold.
 - Q3. **What "half day" means**, if you use a half-day price (default: morning = opening to 1:00 PM, afternoon = 1:00 PM to closing). Leaving the price blank hides the option.
 - Q4. Decided: overnight team approves in person first, then the person pays.
-- Q5. Decided: staff review each free-for-students booking first.
+- Q5. Superseded 23 October 2026: students are not free; they pay an optional student price (see 3.5). No staff review step for student bookings.
 - Q6. **Can Staff approve overnight requests**, or only Admin (default: Staff can).
 - Q7. **Cancellation and refund policy** in plain words (defaults: single bookings self-cancel until 24 hours before; monthly pass until 48 hours before its start; all refunds handled by hand).
 - Q8. **Booking window** (default: 30 days ahead for single bookings, 14 for a monthly pass start) and **max hours per booking** (default: 10).
 - Q9. **Overnight check-in and check-out times**, house rules text, and the **longest single overnight stay** (default: 7 nights).
 - Q10. Whether the Foundation's accountant needs **financial records kept longer than 12 months** (default: 12 months, then anonymise).
 - Q11. Wording for the **Terms of use** of booking (no-shows, behaviour, liability); I will draft, your lawyer should review.
-- Q12. Decided: monthly pass = 30 consecutive calendar days from the start date (Sundays and other closed days still count, and the website must say so clearly). Pass desk cap = 10 of 30, editable by Admin. Free-for-students never applies to the monthly pass (default, not contradicted).
+- Q12. Decided: monthly pass = 30 consecutive calendar days from the start date (Sundays and other closed days still count, and the website must say so clearly). Pass desk cap = 10 of 30, editable by Admin. The student price (if set) also applies to the monthly pass.
 - Q13. **Overnight monthly price:** offer a monthly bed at all? (default: not at launch; leave the price blank and it stays hidden).
 - Q14. Decided: the main sender is a dedicated Gmail account (address only in environment variables) with display name "Rafael Support Foundation", over Gmail SMTP with an app password. Reply-To is the requests inbox via `REPLY_TO_EMAIL`. The info@rafaelsupportfoundation.org mailbox is not used for now. Form submissions keep going to the requests inbox via `FORMS_TO_EMAIL`.
 
@@ -600,3 +599,4 @@ Out of scope for this plan (listed in CLAUDE.md as Phase 2 but later): courses/L
 - **M1 approved as finished by the owner (19 October 2026).** Accepted open items: the app-email Reply-To is untested until M5 (Avast blocks local SMTP), and real PageSpeed Insights for the account build is checked after the domain is public. M2 has not started and needs separate approval.
 - **M2 approved to start (19 October 2026).** 2FA is authenticator-app codes (TOTP), required for Admin and Staff, enforced on the server and in the database (a Staff or Admin without a verified 2FA session is treated as a Member). Recovery: 10 one-time recovery codes (hashed; Supabase has none built in), another Admin can reset someone's 2FA (confirmed by typing their email, audited, emailed), and the Supabase dashboard is the last-resort backstop. The Supabase service-role key (server only) is introduced in M2 for resets, recovery codes, audit/email logging and the database rate limiter. TOTP on the Supabase Free plan: Supabase docs say the TOTP API is free and enabled on all projects.
 - **M2 approved as finished by the owner (23 October 2026).** Tested: Staff and Admin two-step setup with recovery codes, login code, recovery-code use, Admin reset, People page, audit log and filters, email-failure logging, and ending sessions on reset and on recovery-code use. Two bugs found and fixed during testing: the recovery codes screen was lost after setup, and a stale session note sent people back to the code page after their authenticator was removed. Migrations run on the development database: 0001, 0002, 0003. Accepted open items: the 2FA notice emails fail on the owner's PC because Avast blocks local SMTP (test them on the Vercel preview); the app-email Reply-To stays untested until it can be sent from Vercel. M3 has not started and needs separate approval.
+- **M3 started (23 October 2026) with these decisions:** overnight capacity 6 beds, editable in Settings; half-day price wanted, with the split at 1:00 PM (the Admin enters the price); no public-holiday list for now; no overnight monthly bed (blank and hidden); **students are not free, they pay an optional lower price (student day price starts at 1,000 naira, hour and month student prices optional)**; all other prices blank; the public hours-and-prices display stays hidden behind the booking switch. The CLAUDE.md rule "no prices on the site" is to be updated only when the owner confirms the real prices and says so.

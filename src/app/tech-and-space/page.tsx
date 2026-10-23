@@ -6,6 +6,7 @@ import { ClosingSection } from "@/components/ClosingSection";
 import { RequestButton } from "@/components/forms/RequestButton";
 import { PageHero } from "@/components/PageHero";
 import { PhotoComingSoon } from "@/components/PhotoComingSoon";
+import { PublicWorkspaceInfo } from "@/components/PublicWorkspaceInfo";
 import { PillarIcon } from "@/components/PillarIcon";
 import { Reveal } from "@/components/Reveal";
 import { Section, SectionHeading } from "@/components/Section";
@@ -118,6 +119,8 @@ export default function TechSpacePage() {
             </Reveal>
           ))}
         </div>
+        {/* Hours and prices: appears only when the Admin turns booking on in Settings. */}
+        <PublicWorkspaceInfo />
       </Section>
 
       <Section id="media-room" tone="white" className={anchor}>
