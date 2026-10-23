@@ -45,10 +45,20 @@ export type Aal = { current: string | null; next: string | null };
 // How strongly this session has been verified: aal1 = password only, aal2 =
 // password plus a code from the authenticator app. "next" is aal2 when the
 // person has an authenticator set up.
-export async function getAal(): Promise<Aal> {
+//
+// "next" is read from the database (fresh), NOT from the session. The session
+// keeps a copy of the person's factors that goes stale when an authenticator is
+// removed (recovery code, Admin reset), which used to send people back to the
+// code page instead of the setup page. Pass { enrollment: false } when only the
+// current level matters, to skip that extra lookup.
+export async function getAal(opts: { enrollment?: boolean } = {}): Promise<Aal> {
   const supabase = await createClient();
   const { data } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-  return { current: data?.currentLevel ?? null, next: data?.nextLevel ?? null };
+  const current = data?.currentLevel ?? null;
+  if (opts.enrollment === false) return { current, next: null };
+  const factors = await supabase.auth.mfa.listFactors();
+  const enrolled = (factors.data?.totp ?? []).length > 0;
+  return { current, next: enrolled ? "aal2" : "aal1" };
 }
 
 export function needsTwoFactor(role: Role): boolean {
@@ -70,7 +80,7 @@ export async function requireRole(roles: Role[]): Promise<Session> {
   const session = await requireUser();
   if (!roles.includes(session.profile.role)) notFound();
   if (needsTwoFactor(session.profile.role)) {
-    const aal = await getAal();
+    const aal = await getAal({ enrollment: false });
     if (aal.current !== "aal2") redirect(await twoFactorPath());
   }
   return session;

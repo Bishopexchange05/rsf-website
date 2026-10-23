@@ -150,7 +150,7 @@ export async function recoveryCodeAction(_prev: MfaState, fd: FormData): Promise
 export async function regenerateCodesAction(): Promise<MfaState> {
   const session = await requireUser();
   if (!needsTwoFactor(session.profile.role)) redirect("/account");
-  const aal = await getAal();
+  const aal = await getAal({ enrollment: false });
   if (aal.current !== "aal2") return { error: twoFactor.account.needSignInAgain };
   if (!adminConfigured()) return { error: twoFactor.setup.notReady };
 
