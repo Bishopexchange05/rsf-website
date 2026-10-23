@@ -272,6 +272,7 @@ export const auditLog = {
     { value: "role", label: "Role changes" },
     { value: "user", label: "Account changes" },
     { value: "mfa", label: "Two-step verification" },
+    { value: "sessions", label: "Sessions ended" },
   ],
   columns: { when: "When", who: "Who", what: "What", details: "Details" },
   empty: "Nothing recorded yet.",
@@ -285,6 +286,8 @@ export const auditLog = {
     "mfa.enrolled": "Two-step verification set up",
     "mfa.reset": "Two-step verification reset by an Admin",
     "mfa.recovery_code_used": "Recovery code used",
+    "sessions.ended": "Open sessions ended",
+    "sessions.end_failed": "Could not end open sessions",
     "mfa.codes_regenerated": "Recovery codes replaced",
   } as Record<string, string>,
 };

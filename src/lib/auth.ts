@@ -85,3 +85,11 @@ export async function requireRole(roles: Role[]): Promise<Session> {
   }
   return session;
 }
+
+// The id of the session making this request (from its signed login token).
+export async function currentSessionId(): Promise<string | null> {
+  const supabase = await createClient();
+  const { data } = await supabase.auth.getClaims();
+  const id = data?.claims?.session_id;
+  return typeof id === "string" ? id : null;
+}

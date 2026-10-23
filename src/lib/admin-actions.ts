@@ -6,7 +6,7 @@ import { requireRole } from "@/lib/auth";
 import { writeAuditLog } from "@/lib/audit";
 import { cleanEmail } from "@/lib/auth-validation";
 import { sendLoggedEmail } from "@/lib/email/log";
-import { removeAllFactors } from "@/lib/mfa";
+import { endUserSessions, removeAllFactors } from "@/lib/mfa";
 import { limited } from "@/lib/rate-limit-db";
 import { adminConfigured, createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -97,8 +97,21 @@ export async function resetMfaAction(fd: FormData): Promise<void> {
   });
   if (!logged) fail("failed");
 
-  const removed = await removeAllFactors(createAdminClient(), target);
+  const admin = createAdminClient();
+  const removed = await removeAllFactors(admin, target);
   if (!removed) fail("failed");
+
+  // End every open session of that person, so nothing already open keeps Staff or
+  // Admin access. If this fails the Admin is told, and can simply run the reset again.
+  const ended = await endUserSessions(admin, target);
+  await writeAuditLog({
+    actorId: session.user.id,
+    action: ended === null ? "sessions.end_failed" : "sessions.ended",
+    entityType: "profile",
+    entityId: target,
+    detail: ended === null ? "Could not end sessions after a two-step reset." : `${ended} session(s) ended after a two-step reset.`,
+  });
+  if (ended === null) fail("failed");
 
   await sendLoggedEmail(
     {

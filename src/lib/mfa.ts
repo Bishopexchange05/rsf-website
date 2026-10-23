@@ -76,3 +76,22 @@ export async function removeAllFactors(admin: SupabaseClient, userId: string): P
   const codes = await admin.from("recovery_codes").delete().eq("user_id", userId);
   return !codes.error;
 }
+
+// ---- ending sessions (service role) -----------------------------------------
+
+// Ends a person's open sessions (database function from migration 0003).
+// exceptSessionId keeps one session alive, for example the one being used to set
+// up a new authenticator after a recovery code. Returns how many were ended, or
+// null if it could not be done.
+export async function endUserSessions(
+  admin: SupabaseClient,
+  userId: string,
+  exceptSessionId?: string | null,
+): Promise<number | null> {
+  const { data, error } = await admin.rpc("revoke_user_sessions", {
+    p_target: userId,
+    p_except_session: exceptSessionId ?? null,
+  });
+  if (error || typeof data !== "number") return null;
+  return data;
+}

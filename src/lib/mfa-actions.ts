@@ -1,10 +1,10 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { getAal, needsTwoFactor, requireUser } from "@/lib/auth";
+import { currentSessionId, getAal, needsTwoFactor, requireUser } from "@/lib/auth";
 import { writeAuditLog } from "@/lib/audit";
 import { sendLoggedEmail } from "@/lib/email/log";
-import { consumeRecoveryCode, normaliseRecoveryCode, removeAllFactors, replaceRecoveryCodes } from "@/lib/mfa";
+import { consumeRecoveryCode, endUserSessions, normaliseRecoveryCode, removeAllFactors, replaceRecoveryCodes } from "@/lib/mfa";
 import { limited } from "@/lib/rate-limit-db";
 import { adminConfigured, createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -131,6 +131,18 @@ export async function recoveryCodeAction(_prev: MfaState, fd: FormData): Promise
   });
   const removed = await removeAllFactors(admin, session.user.id);
   if (!removed) return { error: common.genericError };
+
+  // Lost phone: end every OTHER open session of this person (keep this one, which
+  // is used to set up the new authenticator).
+  const ended = await endUserSessions(admin, session.user.id, await currentSessionId());
+  await writeAuditLog({
+    actorId: session.user.id,
+    action: ended === null ? "sessions.end_failed" : "sessions.ended",
+    entityType: "profile",
+    entityId: session.user.id,
+    detail: ended === null ? "Could not end other sessions after a recovery code was used." : `${ended} other session(s) ended after a recovery code was used.`,
+  });
+  if (ended === null) return { error: common.genericError };
 
   if (session.user.email) {
     await sendLoggedEmail(
