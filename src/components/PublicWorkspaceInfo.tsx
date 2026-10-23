@@ -61,10 +61,15 @@ export async function PublicWorkspaceInfo() {
     { label: publicInfo.perMonth(info.monthly_pass_days), value: price("day", "month", "standard") },
   ].filter((l) => !l.optional || l.value !== null);
 
+  // A student price is shown only next to a set standard price for the same option.
+  const studentLine = (label: string, kind: string): Line => ({
+    label: `${publicInfo.student}: ${label.toLowerCase()}`,
+    value: price("day", kind, "standard") !== null ? price("day", kind, "student") : null,
+  });
   const students: Line[] = [
-    { label: `${publicInfo.student}: ${publicInfo.perHour.toLowerCase()}`, value: price("day", "hour", "student") },
-    { label: `${publicInfo.student}: ${publicInfo.perDay.toLowerCase()}`, value: price("day", "day", "student") },
-    { label: `${publicInfo.student}: ${publicInfo.perMonth(info.monthly_pass_days).toLowerCase()}`, value: price("day", "month", "student") },
+    studentLine(publicInfo.perHour, "hour"),
+    studentLine(publicInfo.perDay, "day"),
+    studentLine(publicInfo.perMonth(info.monthly_pass_days), "month"),
   ].filter((l) => l.value !== null);
 
   const overnight: Line[] = [
@@ -119,6 +124,14 @@ export async function PublicWorkspaceInfo() {
               </div>
             ))}
           </dl>
+          <p className="mt-5">
+            <Link
+              href={publicInfo.book.href}
+              className="inline-flex min-h-12 w-full items-center justify-center rounded-full bg-amber px-7 py-3 text-center font-heading text-base text-slate-navy transition hover:brightness-95 sm:w-auto"
+            >
+              {publicInfo.book.label}
+            </Link>
+          </p>
           <ul className="mt-4 space-y-1 text-sm opacity-85">
             {price("day", "half_day", "standard") !== null && <li>{publicInfo.halfDayNote(clock(info.half_day_split))}</li>}
             <li>{publicInfo.monthNote(info.monthly_pass_days)}</li>

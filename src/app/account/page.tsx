@@ -45,6 +45,12 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ n
         <ProfileForm fullName={profile.full_name} phone={profile.phone} />
       </div>
 
+      <p className="mt-6 text-sm">
+        <Link href={account.bookingsLink.href} className="font-medium underline underline-offset-2">
+          {account.bookingsLink.label}
+        </Link>
+      </p>
+
       <h2 className="mt-10 text-h3">{account.passwordHeading}</h2>
       <div className="mt-4">
         <ChangePasswordForm />

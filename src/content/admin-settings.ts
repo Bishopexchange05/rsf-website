@@ -76,6 +76,7 @@ export const pricingPage = {
     "A blank half-day price, or a blank overnight monthly price, hides that option completely.",
     "A blank student price means there is no student rate for that option.",
     "A student price can never be higher than the standard price. Students pay by bank transfer like everyone else, and staff check student status in person on arrival.",
+    "A student price is used and shown only when the matching standard price is set. With the standard price blank, nobody can book that option online.",
   ],
   groups: [
     {
@@ -116,6 +117,7 @@ export const rulesPage = {
     { name: "claimed_review_hours", label: "Review reminder (hours)", help: "How long a booking marked paid can wait before it is flagged as overdue for review.", min: 1, max: 720 },
     { name: "advance_booking_days", label: "Book up to this many days ahead", help: "1 to 365.", min: 1, max: 365 },
     { name: "max_hours_per_booking", label: "Longest single booking (hours)", help: "1 to 14.", min: 1, max: 14 },
+    { name: "max_unpaid_bookings", label: "Most unpaid bookings one person can hold at once", help: "Stops one person tying up desks without paying. 1 to 20.", min: 1, max: 20 },
     { name: "cancellation_cutoff_hours", label: "Self-cancel until this many hours before", help: "For hourly, half-day and day bookings. 0 to 720.", min: 0, max: 720 },
     { name: "monthly_pass_days", label: "Monthly pass length (calendar days)", help: "Closed days such as Sundays still count. 7 to 366.", min: 7, max: 366 },
     { name: "monthly_pass_max_desks", label: "Most desks monthly passes can hold at once", help: "So hourly and daily customers always have desks. Cannot be more than the day desks.", min: 0, max: 1000 },
@@ -176,5 +178,6 @@ export const publicInfo = {
   perNight: "Overnight, per night",
   overnightMonth: "Overnight, per month",
   overnightNote: "Overnight stays are for people 18 or over and are approved in person first.",
+  book: { label: "Book a desk", href: "/book" },
   halfDayNote: (split: string) => `Half day: morning until ${split}, or afternoon from ${split}.`,
 };

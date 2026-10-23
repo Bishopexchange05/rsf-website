@@ -130,6 +130,7 @@ export const account = {
   passwordSaved: "Your password has been changed.",
   signOut: "Log out",
   adminLink: { label: "Open the admin area", href: "/admin" },
+  bookingsLink: { label: "My bookings", href: "/account/bookings" },
   notices: {
     verified: "Your email is verified. Welcome.",
   } as Record<string, string>,
