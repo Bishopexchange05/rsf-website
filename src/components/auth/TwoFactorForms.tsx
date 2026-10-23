@@ -128,11 +128,22 @@ export function CodesPanel({ codes, showContinue }: { codes: string[]; showConti
 
 // ------------------------------------------------------------------- set up
 
-export function EnrollPanel() {
+export function EnrollPanel({ alreadyOn = false }: { alreadyOn?: boolean }) {
   const [start, startAction] = useActionState(startEnrollAction, empty);
   const [verify, verifyAction] = useActionState(verifyEnrollAction, empty);
 
   if (verify.codes) return <CodesPanel codes={verify.codes} showContinue />;
+
+  if (alreadyOn) {
+    return (
+      <div className="space-y-4">
+        <p>{twoFactor.setup.alreadyOn}</p>
+        <Link href={twoFactor.setup.alreadyOnLink.href} className="font-medium underline underline-offset-2">
+          {twoFactor.setup.alreadyOnLink.label}
+        </Link>
+      </div>
+    );
+  }
 
   if (start.factorId && start.qr) {
     return (

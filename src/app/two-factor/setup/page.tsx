@@ -14,8 +14,11 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ n
   const { profile } = await requireUser();
   if (!needsTwoFactor(profile.role)) redirect("/account");
   const aal = await getAal();
-  if (aal.current === "aal2") redirect("/admin");
-  if (aal.next === "aal2") redirect("/two-factor");
+  // Right after the code is verified the session is already two-step (aal2). The page must
+  // NOT redirect away then, or the recovery codes screen would be lost. EnrollPanel shows
+  // the codes when it has them, and a short "already on" note otherwise.
+  const alreadyOn = aal.current === "aal2";
+  if (!alreadyOn && aal.next === "aal2") redirect("/two-factor");
   const { notice } = await searchParams;
   return (
     <AuthPage label={twoFactor.label} heading={twoFactor.setup.heading} text={twoFactor.setup.text}>
@@ -24,7 +27,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ n
           {twoFactor.recovery.notice}
         </p>
       )}
-      <EnrollPanel />
+      <EnrollPanel alreadyOn={alreadyOn} />
     </AuthPage>
   );
 }

@@ -163,6 +163,8 @@ export const twoFactor = {
     ],
     start: "Start",
     notReady: "Two-step verification cannot be set up right now. Please tell the site owner.",
+    alreadyOn: "Two-step verification is already on for your account.",
+    alreadyOnLink: { label: "Go to your account", href: "/account" },
     scanAlt: "QR code to scan with your authenticator app",
     keyLabel: "Or type this key into the app",
     codeLabel: "6-digit code from the app",
