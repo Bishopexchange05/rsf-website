@@ -7,7 +7,7 @@ import { Card } from "@/components/Card";
 import { myBookings } from "@/content/booking";
 import { queue } from "@/content/payments";
 import { requireRole } from "@/lib/auth";
-import { dateTimeLabel, dayLabel, timeLabel } from "@/lib/lagos";
+import { bookingWhen, dateTimeLabel, passLateStart } from "@/lib/lagos";
 import { noIndex } from "@/lib/no-index";
 import { formatNaira } from "@/lib/settings-validation";
 import { accountsEnabled } from "@/lib/supabase/config";
@@ -79,9 +79,7 @@ export default async function Page() {
                     </div>
                     <div>
                       <dt className="inline font-semibold">{myBookings.kinds[r.kind] ?? r.kind}: </dt>
-                      <dd className="inline">
-                        {dayLabel(r.starts_at)}, {timeLabel(r.starts_at)} to {timeLabel(r.ends_at)}
-                      </dd>
+                      <dd className="inline">{bookingWhen(r)}</dd>
                     </div>
                     <div>
                       <dt className="inline font-semibold">{queue.waitingSince}: </dt>
@@ -93,7 +91,7 @@ export default async function Page() {
                     </div>
                   </dl>
                   <div className="mt-5 border-t border-slate-navy/10 pt-4 dark:border-white/10">
-                    <PaymentDecision bookingId={r.id} expectedKobo={r.amount_kobo} />
+                    <PaymentDecision bookingId={r.id} expectedKobo={r.amount_kobo} late={passLateStart(r)} isAdmin={profile.role === "admin"} />
                   </div>
                   <p className="mt-4 text-sm">
                     <Link href={`/admin/bookings/${r.id}`} className="font-medium underline underline-offset-2">

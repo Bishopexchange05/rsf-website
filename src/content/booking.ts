@@ -9,6 +9,11 @@ export const errors: Record<string, string> = {
   "too-many-unpaid": "You already have the most unpaid bookings allowed. Please pay for one, or cancel it, first.",
   "price-not-set": "That option is not available to book online. Please contact us for pricing.",
   overlap: "You already have a booking at that time.",
+  "pass-overlap": "You already have a booking during those dates. Cancel it first, or choose another start date.",
+  "pass-full": "Monthly passes are fully booked for that start date. Please choose another start date.",
+  "pass-hours": "The desks are not all free for the whole pass from that date. Please choose another start date.",
+  "pass-covers": "Your monthly pass already covers this day.",
+  "renew-early": "Renewal is not open yet. Please try again nearer the end of your pass.",
   past: "That time is too soon or already past. Please choose a later time.",
   invalid: "Please check your choices and try again.",
   "too-late": "It is too late to cancel this online. Please contact us.",
@@ -20,6 +25,7 @@ export const errors: Record<string, string> = {
 
 export const notices: Record<string, string> = {
   created: "Your desk is held. Pay before the timer ends to keep it.",
+  renewed: "Your new pass is held. Pay before the timer ends to keep it.",
   cancelled: "Your booking was cancelled.",
 };
 
@@ -91,7 +97,7 @@ export const myBookings = {
     pending_approval: "Waiting for approval",
     approved: "Approved",
   } as Record<string, string>,
-  kinds: { hour: "By the hour", half_day: "Half day", day: "Full day" } as Record<string, string>,
+  kinds: { hour: "By the hour", half_day: "Half day", day: "Full day", month: "Monthly pass" } as Record<string, string>,
 };
 
 export const bookingPage = {
@@ -123,7 +129,7 @@ export const bookingPage = {
   },
   email: {
     subject: (ref: string) => `Your desk is held: ${ref}`,
-    body: (name: string, ref: string, when: string, amount: string, until: string, url: string) =>
-      `Hello ${name},\n\nWe are holding a desk for you at RSF Tech & Space.\n\nReference: ${ref}\nWhen: ${when}\nAmount: ${amount}\nPay before: ${until}\n\nThe bank details and a timer are on your booking page:\n${url}\n\nUse the reference as the transfer description. If you do not pay in time, the desk is released automatically.\n\nRafael Support Foundation`,
+    body: (name: string, ref: string, when: string, amount: string, until: string, url: string, note = "") =>
+      `Hello ${name},\n\nWe are holding a desk for you at RSF Tech & Space.\n\nReference: ${ref}\nWhen: ${when}\nAmount: ${amount}\nPay before: ${until}\n${note ? `\n${note}\n` : ""}\nThe bank details and a timer are on your booking page:\n${url}\n\nUse the reference as the transfer description. If you do not pay in time, the desk is released automatically.\n\nRafael Support Foundation`,
   },
 };

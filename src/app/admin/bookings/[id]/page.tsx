@@ -8,11 +8,12 @@ import { ReasonPicker } from "@/components/admin/ReasonPicker";
 import { Card } from "@/components/Card";
 import { PendingButton } from "@/components/PendingButton";
 import { myBookings } from "@/content/booking";
+import { passAdminDetail } from "@/content/monthly";
 import { actionErrors, actionNotices, bookingDetail, whatsappMessage } from "@/content/payments";
 import { requireRole } from "@/lib/auth";
-import { dateTimeLabel, dayLabel, timeLabel } from "@/lib/lagos";
+import { bookingWhen, dateTimeLabel, passLateStart } from "@/lib/lagos";
 import { noIndex } from "@/lib/no-index";
-import { markNoShowAction, markRefundedAction, reopenBookingAction, staffCancelBookingAction } from "@/lib/payment-actions";
+import { cancelPassAction, extendPassAction, markNoShowAction, markRefundedAction, reopenBookingAction, staffCancelBookingAction } from "@/lib/payment-actions";
 import { formatNaira } from "@/lib/settings-validation";
 import { accountsEnabled } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
@@ -36,6 +37,8 @@ type Booking = {
   refund_owed: boolean;
   refund_done_at: string | null;
   refund_note: string | null;
+  extended_days: number;
+  refund_amount_kobo: number | null;
   profiles: One<{ full_name: string; phone: string }>;
   payments: One<{
     customer_reference: string | null;
@@ -66,7 +69,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
   const { data } = await supabase
     .from("bookings")
     .select(
-      "id, reference, kind, starts_at, ends_at, status, amount_kobo, is_student_price, hold_expires_at, cancel_reason, refund_owed, refund_done_at, refund_note, profiles(full_name, phone), payments(customer_reference, claimed_at, status, confirmed_at, received_kobo, rejected_reason)",
+      "id, reference, kind, starts_at, ends_at, status, amount_kobo, is_student_price, hold_expires_at, cancel_reason, refund_owed, refund_done_at, refund_note, extended_days, refund_amount_kobo, profiles(full_name, phone), payments(customer_reference, claimed_at, status, confirmed_at, received_kobo, rejected_reason)",
     )
     .eq("id", id)
     .maybeSingle();
@@ -86,6 +89,8 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
   const statusLabel = myBookings.statuses[status] ?? status;
   const started = new Date(b.starts_at).getTime() <= Date.now();
   const ended = new Date(b.ends_at).getTime() <= Date.now();
+  const isPass = b.kind === "month";
+  const passStarted = isPass && status === "confirmed" && started;
   const canCancel = ["pending_payment", "payment_claimed", "confirmed"].includes(status);
 
   const digits = who?.phone.replace(/\D/g, "") ?? "";
@@ -115,9 +120,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
           </div>
           <div className="flex flex-wrap justify-between gap-x-4">
             <dt className="font-semibold">{bookingDetail.when}</dt>
-            <dd>
-              {dayLabel(b.starts_at)}, {timeLabel(b.starts_at)} to {timeLabel(b.ends_at)}
-            </dd>
+            <dd>{bookingWhen(b)}</dd>
           </div>
           <div className="flex flex-wrap justify-between gap-x-4">
             <dt className="font-semibold">{bookingDetail.amount}</dt>
@@ -129,6 +132,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
           </div>
         </dl>
         {b.is_student_price && <p className="mt-3 rounded-xl bg-amber/30 p-2 text-sm font-medium">{bookingDetail.studentPrice}</p>}
+        {b.extended_days > 0 && <p className="mt-3 text-sm font-medium">{passAdminDetail.extendedBy(b.extended_days)}</p>}
         {whatsapp && (
           <p className="mt-4">
             <a href={whatsapp} target="_blank" rel="noopener noreferrer" className={outline}>
@@ -175,9 +179,9 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
       <Card className="mt-6">
         <h2 className="text-h3">{bookingDetail.actions}</h2>
         <div className="mt-4 space-y-6">
-          {status === "payment_claimed" && <PaymentDecision bookingId={b.id} expectedKobo={b.amount_kobo} />}
+          {status === "payment_claimed" && <PaymentDecision bookingId={b.id} expectedKobo={b.amount_kobo} late={passLateStart(b)} isAdmin={isAdmin} />}
 
-          {status === "confirmed" && started && (
+          {status === "confirmed" && started && !isPass && (
             <ActionForm action={markNoShowAction} notices={actionNotices} errors={actionErrors} toast lockOnSuccess>
               <input type="hidden" name="booking" value={b.id} />
               <PendingButton className={outline} pendingText={bookingDetail.noShowPending}>
@@ -196,7 +200,49 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
             </ActionForm>
           )}
 
-          {canCancel && (
+          {isPass && status === "confirmed" && !ended && isAdmin && (
+            <details>
+              <summary className="min-h-11 cursor-pointer py-2 text-sm font-semibold underline underline-offset-2">{passAdminDetail.extendSummary}</summary>
+              <ActionForm action={extendPassAction} notices={actionNotices} errors={actionErrors} toast lockOnSuccess className="mt-3 space-y-3">
+                <input type="hidden" name="booking" value={b.id} />
+                <p className="text-sm opacity-85">{passAdminDetail.extendHelp}</p>
+                <div>
+                  <label htmlFor="extend-days" className="mb-1.5 block text-sm font-semibold">
+                    {passAdminDetail.extendDays}
+                  </label>
+                  <input id="extend-days" name="days" type="text" inputMode="numeric" autoComplete="off" className={`${input} w-28`} />
+                </div>
+                <ReasonPicker name="reason" label={passAdminDetail.extendReason} quick={[]} />
+                <PendingButton className={solid} pendingText={passAdminDetail.extendPending}>
+                  {passAdminDetail.extendButton}
+                </PendingButton>
+              </ActionForm>
+            </details>
+          )}
+
+          {passStarted && !isAdmin && <p className="text-sm opacity-85">{passAdminDetail.staffStarted}</p>}
+
+          {passStarted && isAdmin && (
+            <details>
+              <summary className="min-h-11 cursor-pointer py-2 text-sm font-semibold underline underline-offset-2">{passAdminDetail.cancelPassSummary}</summary>
+              <ActionForm action={cancelPassAction} notices={actionNotices} errors={actionErrors} toast lockOnSuccess className="mt-3 space-y-3">
+                <input type="hidden" name="booking" value={b.id} />
+                <p className="text-sm opacity-85">{passAdminDetail.cancelPassHelp}</p>
+                <div>
+                  <label htmlFor="cancel-refund" className="mb-1.5 block text-sm font-semibold">
+                    {passAdminDetail.cancelPassRefund}
+                  </label>
+                  <input id="cancel-refund" name="refund" type="text" inputMode="numeric" autoComplete="off" className={`${input} w-40`} />
+                </div>
+                <ReasonPicker name="reason" label={passAdminDetail.cancelPassReason} quick={[]} />
+                <PendingButton className={outline} pendingText={passAdminDetail.cancelPassPending}>
+                  {passAdminDetail.cancelPassButton}
+                </PendingButton>
+              </ActionForm>
+            </details>
+          )}
+
+          {canCancel && !passStarted && (
             <details>
               <summary className="min-h-11 cursor-pointer py-2 text-sm font-semibold underline underline-offset-2">{bookingDetail.cancelSummary}</summary>
               <ActionForm action={staffCancelBookingAction} notices={actionNotices} errors={actionErrors} toast lockOnSuccess className="mt-3 space-y-3">
@@ -223,6 +269,9 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
           ) : (
             <>
               <p className="mt-3">{bookingDetail.refundOwed}</p>
+              <p className="mt-2 font-semibold">
+                {passAdminDetail.refundAmount}: {formatNaira(b.refund_amount_kobo ?? b.amount_kobo)}
+              </p>
               {isAdmin ? (
                 <ActionForm action={markRefundedAction} notices={actionNotices} errors={actionErrors} toast lockOnSuccess className="mt-4 space-y-3">
                   <input type="hidden" name="booking" value={b.id} />

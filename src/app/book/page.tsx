@@ -8,8 +8,9 @@ import { Card } from "@/components/Card";
 import { common } from "@/content/accounts";
 import { bookPage, errors as bookErrors } from "@/content/booking";
 import { requireUser } from "@/lib/auth";
-import { createBookingAction } from "@/lib/booking-actions";
-import { addDays, isIsoDate, lagosDate, lagosHHMM, timeLabel } from "@/lib/lagos";
+import { pass } from "@/content/monthly";
+import { createBookingAction, createPassAction } from "@/lib/booking-actions";
+import { addDays, dayLabel, isIsoDate, lagosDate, lagosHHMM, timeLabel } from "@/lib/lagos";
 import { noIndex } from "@/lib/no-index";
 import { formatNaira } from "@/lib/settings-validation";
 import { accountsEnabled } from "@/lib/supabase/config";
@@ -24,11 +25,14 @@ type Config = {
   advance_booking_days: number;
   max_hours_per_booking: number;
   half_day_split: string;
-  prices: Partial<Record<"hour" | "half_day" | "day", { standard: number; student: number | null }>>;
+  monthly_pass_days: number;
+  monthly_start_window_days: number;
+  prices: Partial<Record<"hour" | "half_day" | "day" | "month", { standard: number; student: number | null }>>;
 };
+type Availability = { available: boolean; reason: string | null; next_start: string | null };
 type Slot = { slot_start: string; slot_end: string; remaining: number; open_for_booking: boolean };
 
-export default async function Page({ searchParams }: { searchParams: Promise<{ date?: string }> }) {
+export default async function Page({ searchParams }: { searchParams: Promise<{ date?: string; start?: string }> }) {
   if (!accountsEnabled) notFound();
   await requireUser();
   const supabase = await createClient();
@@ -39,8 +43,27 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ d
 
   const today = lagosDate();
   const maxDate = addDays(today, config.advance_booking_days);
-  const { date: dateParam } = await searchParams;
+  const { date: dateParam, start: startParam } = await searchParams;
   const date = dateParam && isIsoDate(dateParam) && dateParam >= today && dateParam <= maxDate ? dateParam : today;
+
+  // Monthly pass: the start date being checked (default today) and whether a pass is free from it.
+  const lastStart = addDays(today, config.monthly_start_window_days);
+  const start = startParam && isIsoDate(startParam) && startParam >= today && startParam <= lastStart ? startParam : today;
+  let avail: Availability | null = null;
+  if (config.prices.month) {
+    const { data: a } = await supabase.rpc("get_monthly_availability", { p_start: start });
+    avail = ((a as Availability[] | null) ?? [])[0] ?? null;
+  }
+
+  // A pass that already covers this day: nothing more to book for it.
+  const { data: covering } = await supabase
+    .from("bookings")
+    .select("status, hold_expires_at")
+    .eq("kind", "month")
+    .lte("starts_at", `${date}T00:00:00+01:00`)
+    .gt("ends_at", `${date}T00:00:00+01:00`)
+    .in("status", ["pending_payment", "payment_claimed", "confirmed"]);
+  const covered = (covering ?? []).some((r) => r.status !== "pending_payment" || (r.hold_expires_at && new Date(r.hold_expires_at).getTime() > Date.now()));
 
   const { data: slotData } = await supabase.rpc("get_day_availability", { p_date: date });
   const slots = (slotData as Slot[] | null) ?? [];
@@ -61,7 +84,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ d
   const p = config.prices;
   const dayName = new Intl.DateTimeFormat("en-GB", { timeZone: "Africa/Lagos", weekday: "long", day: "numeric", month: "long" }).format(new Date(`${date}T12:00:00+01:00`));
 
-  const studentBox = (kind: "hour" | "half_day" | "day") =>
+  const studentBox = (kind: "hour" | "half_day" | "day" | "month") =>
     p[kind]?.student != null ? (
       <label className="flex min-h-11 items-start gap-3">
         <input type="checkbox" name="student" className="mt-1 h-5 w-5 shrink-0 accent-navy" />
@@ -82,6 +105,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ d
             </label>
             <input id="date" name="date" type="date" min={today} max={maxDate} defaultValue={date} className={bookInput} />
           </div>
+          <input type="hidden" name="start" value={start} />
           <PendingButton className={bookButton}>
             {bookPage.dateButton}
           </PendingButton>
@@ -96,6 +120,10 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ d
 
       {slots.length === 0 ? (
         <p>{bookPage.closedDay}</p>
+      ) : covered ? (
+        <Card>
+          <p className="font-semibold">{pass.coversDay}</p>
+        </Card>
       ) : (
         <div className="space-y-6">
           {/* ---- by the hour ---- */}
@@ -168,6 +196,68 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ d
           </Card>
         </div>
       )}
+
+      {/* ---- monthly pass ---- */}
+      <Card className="mt-6">
+        <h2 className="text-h3">{pass.heading}</h2>
+        {p.month ? (
+          <>
+            <p className="mt-2">{pass.intro(config.monthly_pass_days)}</p>
+            <p className="mt-1 text-sm opacity-85">{pass.anyDesk}</p>
+            <p className="mt-3 font-semibold">{pass.priceLine(formatNaira(p.month.standard))}</p>
+            {p.month.student != null && <p className="text-sm">{pass.studentLine(formatNaira(p.month.student))}</p>}
+
+            <Form action="/book" className="mt-4 flex flex-wrap items-end gap-3">
+              <input type="hidden" name="date" value={date} />
+              <div className="min-w-0 flex-1">
+                <label htmlFor="start" className="mb-1.5 block text-sm font-semibold">
+                  {pass.startLabel}
+                </label>
+                <input id="start" name="start" type="date" min={today} max={lastStart} defaultValue={start} className={bookInput} />
+              </div>
+              <PendingButton className={bookButton}>{pass.startButton}</PendingButton>
+            </Form>
+
+            <p className="mt-3 text-sm">
+              {pass.runs(`${dayLabel(`${start}T12:00:00+01:00`)} to ${dayLabel(`${addDays(start, config.monthly_pass_days - 1)}T12:00:00+01:00`)}`)}
+            </p>
+
+            {avail?.available ? (
+              <ActionForm action={createPassAction} errors={{ ...bookErrors }} className="mt-4 space-y-4">
+                <input type="hidden" name="start" value={start} />
+                <p className="font-medium">{pass.available}</p>
+                {studentBox("month")}
+                <PendingButton pendingText={common.booking} className={bookButton}>
+                  {pass.book}
+                </PendingButton>
+              </ActionForm>
+            ) : (
+              <div className="mt-4 space-y-2">
+                <p className="font-semibold">
+                  {avail?.reason === "cap" ? pass.fullCap : avail?.reason === "hours" ? pass.fullHours : pass.outside}
+                </p>
+                {avail?.reason && avail.reason !== "window" &&
+                  (avail.next_start ? (
+                    <p>
+                      {pass.next(dayLabel(`${avail.next_start}T12:00:00+01:00`))}{" "}
+                      <Link href={`/book?date=${date}&start=${avail.next_start}`} className="font-medium underline underline-offset-2">
+                        {pass.nextLink}
+                      </Link>
+                    </p>
+                  ) : (
+                    <p>{pass.none}</p>
+                  ))}
+              </div>
+            )}
+          </>
+        ) : (
+          <p className="mt-3">
+            <Link href={pass.contactHref} className="font-medium underline underline-offset-2">
+              {pass.contact}
+            </Link>
+          </p>
+        )}
+      </Card>
     </BookingShell>
   );
 }

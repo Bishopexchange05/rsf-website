@@ -8,10 +8,11 @@ import { Card } from "@/components/Card";
 import { PendingButton } from "@/components/PendingButton";
 import { common } from "@/content/accounts";
 import { bookingPage, errors as bookingErrors, myBookings, notices as bookingNotices } from "@/content/booking";
+import { passBooking } from "@/content/monthly";
 import { claim } from "@/content/payments";
 import { requireUser } from "@/lib/auth";
-import { cancelBookingAction } from "@/lib/booking-actions";
-import { dayLabel, timeLabel } from "@/lib/lagos";
+import { cancelBookingAction, renewPassAction } from "@/lib/booking-actions";
+import { bookingWhen, lagosDate } from "@/lib/lagos";
 import { noIndex } from "@/lib/no-index";
 import { claimPaymentAction } from "@/lib/payment-actions";
 import { formatNaira } from "@/lib/settings-validation";
@@ -32,6 +33,8 @@ type Booking = {
   hold_expires_at: string | null;
   refund_owed: boolean;
   refund_done_at: string | null;
+  extended_days: number;
+  refund_amount_kobo: number | null;
 };
 type Pay = { reference: string; amount_kobo: number; hold_expires_at: string; bank_name: string | null; account_number: string | null; account_name: string | null; note: string | null };
 type PaymentRow = { customer_reference: string | null; rejected_reason: string | null; status: string };
@@ -52,7 +55,7 @@ export default async function Page({
   const supabase = await createClient();
   const { data } = await supabase
     .from("bookings")
-    .select("id, reference, kind, starts_at, ends_at, status, amount_kobo, is_student_price, hold_expires_at, refund_owed, refund_done_at")
+    .select("id, reference, kind, starts_at, ends_at, status, amount_kobo, is_student_price, hold_expires_at, refund_owed, refund_done_at, extended_days, refund_amount_kobo")
     .eq("id", id)
     .eq("user_id", user.id)
     .maybeSingle();
@@ -75,6 +78,21 @@ export default async function Page({
   }
   const canCancel = status === "pending_payment" || status === "confirmed";
 
+  const isPass = b.kind === "month";
+  let cutoffHours: number | null = null;
+  let renewOpen = false;
+  if (isPass) {
+    const { data: cfg } = await supabase.rpc("get_booking_config");
+    const c = cfg as { monthly_self_cancel_cutoff_hours?: number; monthly_start_window_days?: number } | null;
+    cutoffHours = c?.monthly_self_cancel_cutoff_hours ?? null;
+    if (status === "confirmed" && c?.monthly_start_window_days !== undefined) {
+      const endsOn = lagosDate(new Date(new Date(b.ends_at).getTime() - 60 * 60 * 1000));
+      const limit = new Date(`${lagosDate()}T12:00:00Z`);
+      limit.setUTCDate(limit.getUTCDate() + c.monthly_start_window_days - 1);
+      renewOpen = endsOn <= limit.toISOString().slice(0, 10);
+    }
+  }
+
   return (
     <BookingShell label="RSF Tech & Space" heading={bookingPage.heading} text={myBookings.kinds[b.kind] ?? b.kind} notice={notice}>
       <Card>
@@ -85,9 +103,7 @@ export default async function Page({
           </div>
           <div className="flex flex-wrap justify-between gap-x-4">
             <dt className="font-semibold">{bookingPage.when}</dt>
-            <dd>
-              {dayLabel(b.starts_at)}, {timeLabel(b.starts_at)} to {timeLabel(b.ends_at)}
-            </dd>
+            <dd>{bookingWhen(b)}</dd>
           </div>
           <div className="flex flex-wrap justify-between gap-x-4">
             <dt className="font-semibold">{bookingPage.amount}</dt>
@@ -99,6 +115,14 @@ export default async function Page({
           </div>
         </dl>
         {b.is_student_price && <p className="mt-3 text-sm opacity-85">{bookingPage.studentPrice}</p>}
+        {isPass && (
+          <div className="mt-3 space-y-1 text-sm opacity-85">
+            <p>{passBooking.length(Math.round((new Date(b.ends_at).getTime() - new Date(b.starts_at).getTime()) / 86400000) - b.extended_days)}</p>
+            {b.extended_days > 0 && <p className="font-medium">{passBooking.extended(b.extended_days)}</p>}
+            <p>{passBooking.anyDesk}</p>
+            {status === "pending_payment" && <p>{passBooking.moved}</p>}
+          </div>
+        )}
       </Card>
 
       {needsPayment && (
@@ -199,7 +223,12 @@ export default async function Page({
       {status === "cancelled" && (
         <Card className="mt-6">
           <p>{claim.cancelledText}</p>
-          {b.refund_owed && !b.refund_done_at && <p className="mt-2 font-semibold">{claim.cancelledRefund}</p>}
+          {b.refund_owed && !b.refund_done_at && (
+            <p className="mt-2 font-semibold">
+              {claim.cancelledRefund}
+              {b.refund_amount_kobo !== null && " (" + formatNaira(b.refund_amount_kobo) + ")"}
+            </p>
+          )}
         </Card>
       )}
 
@@ -211,10 +240,23 @@ export default async function Page({
 
       {status === "expired" && <p className="mt-6">{bookingPage.pay.expired}</p>}
 
+      {isPass && renewOpen && (
+        <Card className="mt-6">
+          <h2 className="text-h3">{passBooking.renew.heading}</h2>
+          <p className="mt-2">{passBooking.renew.text}</p>
+          <ActionForm action={renewPassAction} notices={passBooking.notices} errors={{ ...bookingErrors, ...passBooking.errors }} className="mt-4">
+            <input type="hidden" name="booking" value={b.id} />
+            <PendingButton className={bookButton} pendingText={passBooking.renew.pending}>
+              {passBooking.renew.button}
+            </PendingButton>
+          </ActionForm>
+        </Card>
+      )}
+
       {canCancel && (
         <ActionForm action={cancelBookingAction} notices={bookingNotices} errors={bookingErrors} className="mt-6">
           <input type="hidden" name="booking" value={b.id} />
-          <p className="mb-3 text-sm opacity-85">{status === "confirmed" ? bookingPage.cancel.confirmedHelp : bookingPage.cancel.help}</p>
+          <p className="mb-3 text-sm opacity-85">{status === "confirmed" ? (isPass ? passBooking.cancelConfirmed(cutoffHours) : bookingPage.cancel.confirmedHelp) : bookingPage.cancel.help}</p>
           <PendingButton className={bookOutline} pendingText={common.cancelling}>
             {bookingPage.cancel.button}
           </PendingButton>

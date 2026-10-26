@@ -5,7 +5,7 @@ import { BookingShell, bookOutline } from "@/components/booking/BookingShell";
 import { Card } from "@/components/Card";
 import { myBookings } from "@/content/booking";
 import { requireUser } from "@/lib/auth";
-import { dayLabel, timeLabel } from "@/lib/lagos";
+import { bookingWhen } from "@/lib/lagos";
 import { noIndex } from "@/lib/no-index";
 import { formatNaira } from "@/lib/settings-validation";
 import { accountsEnabled } from "@/lib/supabase/config";
@@ -51,9 +51,7 @@ export default async function Page() {
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
                       <h2 className="text-h3">{myBookings.kinds[r.kind] ?? r.kind}</h2>
-                      <p className="text-sm">
-                        {dayLabel(r.starts_at)}, {timeLabel(r.starts_at)} to {timeLabel(r.ends_at)}
-                      </p>
+                      <p className="text-sm">{bookingWhen(r)}</p>
                       <p className="text-sm opacity-85">
                         {r.reference} · {formatNaira(r.amount_kobo)}
                       </p>

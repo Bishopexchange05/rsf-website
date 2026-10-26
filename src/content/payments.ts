@@ -1,6 +1,8 @@
 // All wording for the bank-transfer flow (M5): the customer's "I've paid", the
 // staff Payments queue and Bookings pages, and the emails. No copy in components.
 
+import { passAdminDetail } from "@/content/monthly";
+
 // ---------------------------------------------------------------- customer
 
 export const claim = {
@@ -38,6 +40,7 @@ export const claim = {
 export const staffNav = {
   payments: { label: "Payments", href: "/admin/payments", text: "Bookings where the customer says they have paid. Check the bank account, then confirm or reject." },
   bookings: { label: "Bookings", href: "/admin/bookings", text: "Find any booking by reference, name, phone or day, and manage it." },
+  passes: { label: "Monthly passes", href: "/admin/passes", text: "Active and upcoming passes, the desks they hold, and passes ending soon." },
 };
 
 export const queue = {
@@ -93,6 +96,7 @@ export const bookingsAdmin = {
     { value: "pending", label: "Waiting for payment" },
     { value: "confirmed", label: "Confirmed" },
     { value: "expired", label: "Expired" },
+    { value: "passes", label: "Monthly passes" },
     { value: "refunds", label: "Refunds owed" },
   ],
   empty: "No bookings match.",
@@ -184,8 +188,8 @@ export const emails = {
   },
   confirmed: {
     subject: (ref: string) => `Your booking is confirmed: ${ref}`,
-    body: (name: string, ref: string, when: string, amount: string, url: string, student: boolean) =>
-      `Hello ${name},\n\nYour payment is confirmed and your desk is booked at RSF Tech & Space.\n\nReference: ${ref}\nWhen: ${when}\nAmount paid: ${amount}\n${student ? "\nYou booked at the student price. Please bring your student ID. Our team will ask to see it when you arrive.\n" : ""}\nYour booking:\n${url}\n\nRafael Support Foundation`,
+    body: (name: string, ref: string, when: string, amount: string, url: string, student: boolean, note = "") =>
+      `Hello ${name},\n\nYour payment is confirmed and your desk is booked at RSF Tech & Space.\n\nReference: ${ref}\nWhen: ${when}\nAmount paid: ${amount}\n${note ? `\n${note}\n` : ""}${student ? "\nYou booked at the student price. Please bring your student ID. Our team will ask to see it when you arrive.\n" : ""}\nYour booking:\n${url}\n\nRafael Support Foundation`,
   },
   rejected: {
     subject: (ref: string) => `We could not accept your payment: ${ref}`,
@@ -200,5 +204,5 @@ export const emails = {
 };
 
 // Messages for every staff action form (the queue and the booking page share them).
-export const actionNotices: Record<string, string> = { ...queue.notices, ...bookingDetail.notices };
-export const actionErrors: Record<string, string> = { ...queue.errors, ...bookingDetail.errors };
+export const actionNotices: Record<string, string> = { ...queue.notices, ...bookingDetail.notices, ...passAdminDetail.notices };
+export const actionErrors: Record<string, string> = { ...queue.errors, ...bookingDetail.errors, ...passAdminDetail.errors };

@@ -7,7 +7,7 @@ import { Card } from "@/components/Card";
 import { myBookings } from "@/content/booking";
 import { bookingsAdmin } from "@/content/payments";
 import { requireRole } from "@/lib/auth";
-import { addDays, dayLabel, isIsoDate, timeLabel } from "@/lib/lagos";
+import { addDays, bookingWhen, isIsoDate } from "@/lib/lagos";
 import { noIndex } from "@/lib/no-index";
 import { formatNaira } from "@/lib/settings-validation";
 import { accountsEnabled } from "@/lib/supabase/config";
@@ -53,6 +53,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ q
     .limit(50);
 
   if (VIEW_STATUS[view]) query = query.eq("status", VIEW_STATUS[view]);
+  if (view === "passes") query = query.eq("kind", "month");
   if (view === "refunds") query = query.eq("refund_owed", true).is("refund_done_at", null);
   if (isIsoDate(day)) {
     query = query.gte("starts_at", `${day}T00:00:00+01:00`).lt("starts_at", `${addDays(day, 1)}T00:00:00+01:00`);
@@ -128,7 +129,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ q
                       <p className="font-mono text-lg font-semibold">{r.reference}</p>
                       <p className="text-sm">{who ? `${who.full_name}, ${who.phone}` : "—"}</p>
                       <p className="text-sm opacity-85">
-                        {myBookings.kinds[r.kind] ?? r.kind}: {dayLabel(r.starts_at)}, {timeLabel(r.starts_at)} to {timeLabel(r.ends_at)} · {formatNaira(r.amount_kobo)}
+                        {myBookings.kinds[r.kind] ?? r.kind}: {bookingWhen(r)} · {formatNaira(r.amount_kobo)}
                       </p>
                     </div>
                     <ul className="flex flex-wrap gap-2 text-xs font-semibold">

@@ -36,6 +36,9 @@ export function AdminShell({
           <Link href={staffNav.bookings.href} className={pill}>
             {staffNav.bookings.label}
           </Link>
+          <Link href={staffNav.passes.href} className={pill}>
+            {staffNav.passes.label}
+          </Link>
           {isAdmin &&
             admin.links.map((l) => (
               <Link key={l.href} href={l.href} className={pill}>

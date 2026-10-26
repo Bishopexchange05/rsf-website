@@ -4,12 +4,13 @@ import { revalidatePath } from "next/cache";
 import type { ActionResult } from "@/lib/action-result";
 import { requireRole, requireUser } from "@/lib/auth";
 import { sendLoggedEmail } from "@/lib/email/log";
-import { dayLabel, timeLabel } from "@/lib/lagos";
+import { bookingWhen } from "@/lib/lagos";
 import { limited } from "@/lib/rate-limit-db";
 import { formatNaira, nairaToKobo } from "@/lib/settings-validation";
 import { getSiteOrigin } from "@/lib/site-origin";
 import { adminConfigured, createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { passEmailNote } from "@/content/monthly";
 import { emails } from "@/content/payments";
 
 // The bank-transfer actions. Customers say "I've paid"; Staff and Admin confirm or
@@ -43,7 +44,10 @@ function staffError(error: DbError): string {
   if (m.includes("no longer available")) return "unavailable";
   if (m.includes("already passed")) return "passed";
   if (m.includes("not started")) return "not-started";
-  if (m.includes("amount received")) return "amount";
+  if (m.includes("amount received") || m.includes("refund amount")) return "amount";
+  if (m.includes("moved dates")) return "shift-blocked";
+  if (m.includes("pass has started")) return "pass-started";
+  if (m.includes("number of days")) return "days";
   if (m.includes("note is too long")) return "note";
   return "failed";
 }
@@ -65,6 +69,7 @@ async function customerFor(userId: string | null): Promise<{ email: string | nul
 type BookingRow = {
   id: string;
   reference: string;
+  kind: string;
   user_id: string | null;
   starts_at: string;
   ends_at: string;
@@ -79,14 +84,14 @@ async function loadBooking(id: string): Promise<BookingRow | null> {
   const supabase = await createClient();
   const { data } = await supabase
     .from("bookings")
-    .select("id, reference, user_id, starts_at, ends_at, amount_kobo, is_student_price, status, cancel_reason, refund_owed")
+    .select("id, reference, kind, user_id, starts_at, ends_at, amount_kobo, is_student_price, status, cancel_reason, refund_owed")
     .eq("id", id)
     .maybeSingle();
   return (data as BookingRow | null) ?? null;
 }
 
 function whenLabel(b: BookingRow): string {
-  return `${dayLabel(b.starts_at)}, ${timeLabel(b.starts_at)} to ${timeLabel(b.ends_at)}`;
+  return bookingWhen(b);
 }
 
 function refresh(id: string) {
@@ -152,8 +157,18 @@ export async function confirmPaymentAction(fd: FormData): Promise<ActionResult> 
     received = k;
   }
 
+  // A pass confirmed after its start date starts on the confirmation day; an Admin can
+  // keep the original dates by ticking the box and giving a reason (checked in the database).
+  const keep = text(fd, "keep") === "on";
+  const keepReason = text(fd, "keepReason").trim().slice(0, 300);
+
   const supabase = await createClient();
-  const { error } = await supabase.rpc("staff_confirm_payment", { p_booking: id, p_received_kobo: received });
+  const { error } = await supabase.rpc("staff_confirm_payment", {
+    p_booking: id,
+    p_received_kobo: received,
+    p_keep_dates: keep,
+    p_reason: keep ? keepReason : null,
+  });
   if (error) return { error: staffError(error) };
 
   const b = await loadBooking(id);
@@ -165,7 +180,7 @@ export async function confirmPaymentAction(fd: FormData): Promise<ActionResult> 
         {
           to: c.email,
           subject: emails.confirmed.subject(b.reference),
-          text: emails.confirmed.body(c.name, b.reference, whenLabel(b), formatNaira(received ?? b.amount_kobo), `${origin}/account/bookings/${id}`, b.is_student_price),
+          text: emails.confirmed.body(c.name, b.reference, whenLabel(b), formatNaira(received ?? b.amount_kobo), `${origin}/account/bookings/${id}`, b.is_student_price, b.kind === "month" ? passEmailNote(Math.round((new Date(b.ends_at).getTime() - new Date(b.starts_at).getTime()) / (24 * HOUR))) : ""),
         },
         { template: "payment-confirmed", userId: b.user_id ?? undefined },
       );
@@ -262,3 +277,52 @@ export async function markRefundedAction(fd: FormData): Promise<ActionResult> {
   return { notice: "refunded" };
 }
 
+
+// Admin only: add days to a confirmed pass (after an unexpected closure).
+export async function extendPassAction(fd: FormData): Promise<ActionResult> {
+  await requireRole(["admin"]);
+  const id = text(fd, "booking");
+  const reason = text(fd, "reason").trim();
+  const days = Number(text(fd, "days").trim());
+  if (!UUID.test(id)) return { error: "failed" };
+  if (!Number.isInteger(days) || days < 1 || days > 60) return { error: "days" };
+  if (reason.length < 3 || reason.length > 300) return { error: "reason" };
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("admin_extend_pass", { p_booking: id, p_days: days, p_reason: reason });
+  if (error) return { error: staffError(error) };
+  refresh(id);
+  revalidatePath("/admin/passes");
+  return { notice: "extended" };
+}
+
+// Admin only: cancel a confirmed pass (also after it has started) with the refund amount
+// chosen by the Admin. The amount and reason are recorded; the customer is emailed.
+export async function cancelPassAction(fd: FormData): Promise<ActionResult> {
+  await requireRole(["admin"]);
+  const id = text(fd, "booking");
+  const reason = text(fd, "reason").trim();
+  if (!UUID.test(id)) return { error: "failed" };
+  if (reason.length < 3 || reason.length > 300) return { error: "reason" };
+  const refundText = text(fd, "refund").trim();
+  const refund = refundText === "" ? 0 : nairaToKobo(refundText);
+  if (refund === "invalid" || refund === null) return { error: "amount" };
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("admin_cancel_pass", { p_booking: id, p_reason: reason, p_refund_kobo: refund });
+  if (error) return { error: staffError(error) };
+
+  const b = await loadBooking(id);
+  if (b) {
+    const c = await customerFor(b.user_id);
+    const origin = await getSiteOrigin();
+    if (c.email) {
+      await sendLoggedEmail(
+        { to: c.email, subject: emails.cancelled.subject(b.reference), text: emails.cancelled.body(c.name, b.reference, reason, refund > 0, `${origin}/account/bookings/${id}`, `${origin}/contact`) },
+        { template: "booking-cancelled-by-team", userId: b.user_id ?? undefined },
+      );
+    }
+  }
+  refresh(id);
+  revalidatePath("/admin/passes");
+  return { notice: "pass-cancelled" };
+}

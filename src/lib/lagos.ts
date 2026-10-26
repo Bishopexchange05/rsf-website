@@ -44,3 +44,24 @@ export function isIsoDate(value: string): boolean {
   const d = new Date(`${value}T12:00:00Z`);
   return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === value;
 }
+
+// A monthly pass runs whole days: "Wed, 28 Oct 2026 to Fri, 27 Nov 2026" (its last day is
+// the day before the stored end, which is midnight at the start of the next day).
+export function passRange(startsIso: string, endsIso: string): string {
+  const last = new Date(new Date(endsIso).getTime() - 60 * 60 * 1000).toISOString();
+  return `${dayLabel(startsIso)} to ${dayLabel(last)}`;
+}
+
+// How a booking's time is written: a pass by its dates, everything else by day and hours.
+export function bookingWhen(b: { kind: string; starts_at: string; ends_at: string }): string {
+  return b.kind === "month"
+    ? passRange(b.starts_at, b.ends_at)
+    : `${dayLabel(b.starts_at)}, ${timeLabel(b.starts_at)} to ${timeLabel(b.ends_at)}`;
+}
+
+// A pass still waiting for payment whose start date has already gone by: the start moves
+// to today when it is confirmed. Returns the two dates for the notice, or undefined.
+export function passLateStart(b: { kind: string; starts_at: string }): { oldStart: string; newStart: string } | undefined {
+  if (b.kind !== "month" || lagosDate(new Date(b.starts_at)) >= lagosDate()) return undefined;
+  return { oldStart: dayLabel(b.starts_at), newStart: dayLabel(new Date().toISOString()) };
+}

@@ -5,12 +5,13 @@ import { redirect } from "next/navigation";
 import type { ActionResult } from "@/lib/action-result";
 import { requireUser } from "@/lib/auth";
 import { sendLoggedEmail } from "@/lib/email/log";
-import { dateTimeLabel, dayLabel, isIsoDate, timeLabel } from "@/lib/lagos";
+import { bookingWhen, dateTimeLabel, isIsoDate } from "@/lib/lagos";
 import { limited } from "@/lib/rate-limit-db";
 import { formatNaira, parseIntIn, parseTime } from "@/lib/settings-validation";
 import { getSiteOrigin } from "@/lib/site-origin";
 import { createClient } from "@/lib/supabase/server";
 import { bookingPage } from "@/content/booking";
+import { passEmailNote } from "@/content/monthly";
 
 // Member booking actions. Everything is checked again inside the database
 // function, which is the part that counts. Results come back as short codes in
@@ -34,6 +35,11 @@ function errorCode(error: { code?: string; message?: string }): string {
   if (m.includes("no longer available")) return "unavailable";
   if (m.includes("unpaid bookings")) return "too-many-unpaid";
   if (m.includes("contact us for pricing")) return "price-not-set";
+  if (m.includes("during those dates")) return "pass-overlap";
+  if (m.includes("fully booked")) return "pass-full";
+  if (m.includes("not all free")) return "pass-hours";
+  if (m.includes("covers this day")) return "pass-covers";
+  if (m.includes("renewal is not open")) return "renew-early";
   if (m.includes("already have a booking")) return "overlap";
   if (m.includes("too soon") || m.includes("already past")) return "past";
   if (m.includes("too late to cancel")) return "too-late";
@@ -45,8 +51,40 @@ function errorCode(error: { code?: string; message?: string }): string {
 // A booking problem is shown in place, under the form. If the desks changed under the
 // person (someone else booked first), the page is refreshed so the counts are right.
 function problem(error: string): ActionResult {
-  if (error === "unavailable" || error === "overlap" || error === "too-many-unpaid") revalidatePath("/book");
+  if (["unavailable", "overlap", "too-many-unpaid", "pass-full", "pass-hours", "pass-overlap"].includes(error)) revalidatePath("/book");
   return { error };
+}
+
+type Session = Awaited<ReturnType<typeof requireUser>>;
+
+// Tell the member (bank details and the timer are on the booking page). A failed
+// email never stops the booking.
+async function sendCreatedEmail(session: Session, id: string) {
+  const supabase = await createClient();
+  const { data: b } = await supabase
+    .from("bookings")
+    .select("reference, kind, starts_at, ends_at, amount_kobo, hold_expires_at")
+    .eq("id", id)
+    .maybeSingle();
+  if (!b || !session.user.email) return;
+  const origin = await getSiteOrigin();
+  const days = Math.round((new Date(b.ends_at).getTime() - new Date(b.starts_at).getTime()) / (24 * HOUR));
+  await sendLoggedEmail(
+    {
+      to: session.user.email,
+      subject: bookingPage.email.subject(b.reference),
+      text: bookingPage.email.body(
+        session.profile.full_name,
+        b.reference,
+        bookingWhen(b),
+        formatNaira(b.amount_kobo),
+        b.hold_expires_at ? dateTimeLabel(b.hold_expires_at) : "",
+        `${origin}/account/bookings/${id}`,
+        b.kind === "month" ? passEmailNote(days) : "",
+      ),
+    },
+    { template: "booking-created", userId: session.user.id },
+  );
 }
 
 export async function createBookingAction(fd: FormData): Promise<ActionResult> {
@@ -70,6 +108,20 @@ export async function createBookingAction(fd: FormData): Promise<ActionResult> {
   if (await limited(`book:${session.user.id}`, 15, HOUR)) return problem("too-many");
 
   const supabase = await createClient();
+
+  // A member whose monthly pass covers this day has nothing more to book for it.
+  const dayStart = `${date}T00:00:00+01:00`;
+  const { data: covering } = await supabase
+    .from("bookings")
+    .select("status, hold_expires_at")
+    .eq("user_id", session.user.id)
+    .eq("kind", "month")
+    .lte("starts_at", dayStart)
+    .gt("ends_at", dayStart)
+    .in("status", ["pending_payment", "payment_claimed", "confirmed"]);
+  const live = (covering ?? []).some((r) => r.status !== "pending_payment" || (r.hold_expires_at && new Date(r.hold_expires_at).getTime() > Date.now()));
+  if (live) return problem("pass-covers");
+
   const { data, error } = await supabase.rpc("create_day_booking", {
     p_date: date,
     p_kind: kind,
@@ -81,33 +133,7 @@ export async function createBookingAction(fd: FormData): Promise<ActionResult> {
   if (error || typeof data !== "string") return problem(error ? errorCode(error) : "failed");
 
   const id = data as string;
-
-  // Tell the member (bank details and the timer are on the booking page). A failed
-  // email never stops the booking.
-  const { data: b } = await supabase
-    .from("bookings")
-    .select("reference, starts_at, ends_at, amount_kobo, hold_expires_at")
-    .eq("id", id)
-    .maybeSingle();
-  if (b && session.user.email) {
-    const origin = await getSiteOrigin();
-    const when = `${dayLabel(b.starts_at)}, ${timeLabel(b.starts_at)} to ${timeLabel(b.ends_at)}`;
-    await sendLoggedEmail(
-      {
-        to: session.user.email,
-        subject: bookingPage.email.subject(b.reference),
-        text: bookingPage.email.body(
-          session.profile.full_name,
-          b.reference,
-          when,
-          formatNaira(b.amount_kobo),
-          b.hold_expires_at ? dateTimeLabel(b.hold_expires_at) : "",
-          `${origin}/account/bookings/${id}`,
-        ),
-      },
-      { template: "booking-created", userId: session.user.id },
-    );
-  }
+  await sendCreatedEmail(session, id);
   redirect(`/account/bookings/${id}?notice=created`);
 }
 
@@ -123,4 +149,31 @@ export async function cancelBookingAction(fd: FormData): Promise<ActionResult> {
   revalidatePath("/account/bookings");
   revalidatePath("/book");
   return { notice: "cancelled" };
+}
+
+// Book a monthly pass: the start date (and the student box) come from the form.
+export async function createPassAction(fd: FormData): Promise<ActionResult> {
+  const session = await requireUser();
+  const start = text(fd, "start");
+  if (!isIsoDate(start)) return problem("invalid");
+  if (await limited(`book:${session.user.id}`, 15, HOUR)) return problem("too-many");
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("create_month_booking", { p_start: start, p_student: text(fd, "student") === "on" });
+  if (error || typeof data !== "string") return problem(error ? errorCode(error) : "failed");
+  await sendCreatedEmail(session, data);
+  redirect(`/account/bookings/${data}?notice=created`);
+}
+
+export async function renewPassAction(fd: FormData): Promise<ActionResult> {
+  const session = await requireUser();
+  const id = text(fd, "booking");
+  if (!UUID.test(id)) return { error: "failed" };
+  if (await limited(`book:${session.user.id}`, 15, HOUR)) return problem("too-many");
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("renew_my_pass", { p_booking: id });
+  if (error || typeof data !== "string") return problem(error ? errorCode(error) : "failed");
+  await sendCreatedEmail(session, data);
+  redirect(`/account/bookings/${data}?notice=renewed`);
 }
