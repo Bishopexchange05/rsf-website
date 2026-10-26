@@ -1,20 +1,22 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { BookingShell, bookOutline } from "@/components/booking/BookingShell";
+import { ActionForm } from "@/components/ActionForm";
+import { BookingShell, bookButton, bookInput, bookOutline } from "@/components/booking/BookingShell";
 import { HoldCountdown } from "@/components/booking/HoldCountdown";
 import { Card } from "@/components/Card";
+import { PendingButton } from "@/components/PendingButton";
 import { common } from "@/content/accounts";
 import { bookingPage, errors as bookingErrors, myBookings, notices as bookingNotices } from "@/content/booking";
+import { claim } from "@/content/payments";
 import { requireUser } from "@/lib/auth";
 import { cancelBookingAction } from "@/lib/booking-actions";
 import { dayLabel, timeLabel } from "@/lib/lagos";
 import { noIndex } from "@/lib/no-index";
+import { claimPaymentAction } from "@/lib/payment-actions";
 import { formatNaira } from "@/lib/settings-validation";
 import { accountsEnabled } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
-import { ActionForm } from "@/components/ActionForm";
-import { PendingButton } from "@/components/PendingButton";
 
 export const metadata: Metadata = { title: bookingPage.title, ...noIndex };
 
@@ -28,8 +30,11 @@ type Booking = {
   amount_kobo: number;
   is_student_price: boolean;
   hold_expires_at: string | null;
+  refund_owed: boolean;
+  refund_done_at: string | null;
 };
 type Pay = { reference: string; amount_kobo: number; hold_expires_at: string; bank_name: string | null; account_number: string | null; account_name: string | null; note: string | null };
+type PaymentRow = { customer_reference: string | null; rejected_reason: string | null; status: string };
 
 export default async function Page({
   params,
@@ -47,7 +52,7 @@ export default async function Page({
   const supabase = await createClient();
   const { data } = await supabase
     .from("bookings")
-    .select("id, reference, kind, starts_at, ends_at, status, amount_kobo, is_student_price, hold_expires_at")
+    .select("id, reference, kind, starts_at, ends_at, status, amount_kobo, is_student_price, hold_expires_at, refund_owed, refund_done_at")
     .eq("id", id)
     .eq("user_id", user.id)
     .maybeSingle();
@@ -62,6 +67,11 @@ export default async function Page({
   if (needsPayment) {
     const { data: rows } = await supabase.rpc("get_payment_instructions", { p_booking: id });
     pay = ((rows as Pay[] | null) ?? [])[0] ?? null;
+  }
+  let payment: PaymentRow | null = null;
+  if (["payment_claimed", "confirmed", "rejected"].includes(status)) {
+    const { data: p } = await supabase.from("payments").select("customer_reference, rejected_reason, status").eq("booking_id", id).maybeSingle();
+    payment = (p as PaymentRow | null) ?? null;
   }
   const canCancel = status === "pending_payment" || status === "confirmed";
 
@@ -127,7 +137,75 @@ export default async function Page({
           ) : (
             <p className="mt-4">{bookingPage.pay.noBank}</p>
           )}
-          <p className="mt-4 text-sm opacity-85">{bookingPage.pay.next}</p>
+
+          {/* ---- "I've paid" ---- */}
+          <div className="mt-6 border-t border-slate-navy/10 pt-5 dark:border-white/10">
+            <h3 className="text-lg font-semibold">{claim.heading}</h3>
+            <ActionForm action={claimPaymentAction} notices={claim.notices} errors={claim.errors} lockOnSuccess className="mt-3 space-y-3">
+              <input type="hidden" name="booking" value={b.id} />
+              <div>
+                <label htmlFor="reference" className="mb-1.5 block text-sm font-semibold">
+                  {claim.referenceLabel}
+                </label>
+                <input id="reference" name="reference" type="text" maxLength={120} autoComplete="off" className={bookInput} />
+                <p className="mt-1 text-sm opacity-75">{claim.referenceHelp}</p>
+              </div>
+              <p className="text-sm opacity-85">{claim.confirmNote}</p>
+              <PendingButton className={bookButton} pendingText={claim.pending}>
+                {claim.button}
+              </PendingButton>
+            </ActionForm>
+          </div>
+        </Card>
+      )}
+
+      {status === "payment_claimed" && (
+        <Card className="mt-6">
+          <h2 className="text-h3">{claim.claimedHeading}</h2>
+          <p className="mt-2">{claim.claimedText}</p>
+          {payment?.customer_reference && (
+            <p className="mt-3 text-sm">
+              <span className="font-semibold">{claim.yourReference}:</span> {payment.customer_reference}
+            </p>
+          )}
+        </Card>
+      )}
+
+      {status === "confirmed" && (
+        <Card className="mt-6">
+          <h2 className="text-h3">{claim.confirmedHeading}</h2>
+          <p className="mt-2">{claim.confirmedText}</p>
+          {b.is_student_price && <p className="mt-3 rounded-xl bg-amber/30 p-3 text-sm font-medium">{claim.studentReminder}</p>}
+        </Card>
+      )}
+
+      {status === "rejected" && (
+        <Card className="mt-6">
+          <h2 className="text-h3">{claim.rejectedHeading}</h2>
+          {payment?.rejected_reason && (
+            <p className="mt-2">
+              <span className="font-semibold">{claim.rejectedWhy}:</span> {payment.rejected_reason}
+            </p>
+          )}
+          <p className="mt-2">{claim.rejectedText}</p>
+          <p className="mt-3">
+            <Link href={claim.contactHref} className={bookOutline}>
+              {claim.contactLine}
+            </Link>
+          </p>
+        </Card>
+      )}
+
+      {status === "cancelled" && (
+        <Card className="mt-6">
+          <p>{claim.cancelledText}</p>
+          {b.refund_owed && !b.refund_done_at && <p className="mt-2 font-semibold">{claim.cancelledRefund}</p>}
+        </Card>
+      )}
+
+      {status === "no_show" && (
+        <Card className="mt-6">
+          <p>{claim.noShowText}</p>
         </Card>
       )}
 
