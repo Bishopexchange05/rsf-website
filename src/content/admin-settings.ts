@@ -12,7 +12,7 @@ export const settingsHub = {
   turnOnHelp: "You need to enter the bank details first.",
   sections: [
     { href: "/admin/settings/hours", label: "Opening hours", text: "Opening and closing time for each weekday, and closed days." },
-    { href: "/admin/settings/capacity", label: "Desks and beds", text: "How many day desks and overnight beds there are." },
+    { href: "/admin/settings/capacity", label: "Desks", text: "How many day desks and overnight desks there are." },
     { href: "/admin/settings/pricing", label: "Prices", text: "Standard and student prices. A blank price shows as Contact us for pricing." },
     { href: "/admin/settings/rules", label: "Booking rules", text: "How long a booking is held, how far ahead people can book, monthly pass rules." },
     { href: "/admin/settings/overnight", label: "Overnight details", text: "Check-in times, house rules and the private location." },
@@ -54,12 +54,12 @@ export const hoursPage = {
 };
 
 export const capacityPage = {
-  title: "Desks and beds",
-  heading: "Desks and beds",
+  title: "Desks",
+  heading: "Desks",
   text: "These numbers set how many people can book at the same time.",
   dayLabel: "Day desks",
   dayHelp: "Desks available in each hour.",
-  overnightLabel: "Overnight beds",
+  overnightLabel: "Overnight desks",
   overnightHelp: "People who can stay at the same time.",
   bookable: "Open for booking",
   lowerWarning: "Lowering a number never cancels bookings people already have. It only limits new ones.",
@@ -125,6 +125,10 @@ export const rulesPage = {
     { name: "monthly_self_cancel_cutoff_hours", label: "Cancel a monthly pass until this many hours before its start", help: "0 to 720.", min: 0, max: 720 },
     { name: "overnight_max_nights", label: "Longest single overnight booking (nights)", help: "1 to 60.", min: 1, max: 60 },
   ],
+  monthlyHeading: "Monthly pass",
+  monthlyExplain: (days: number, maxDesks: number) =>
+    `A monthly pass reserves one desk for one person for ${days} days in a row, starting on a date they choose. They pay once. Sundays and other closed days still count towards the ${days} days. Monthly passes can use at most ${maxDesks} desks at the same time, so hourly and daily visitors always have desks.`,
+  overnightHeading: "Overnight",
   halfDayLabel: "Half day splits at",
   halfDayHelp: "Morning is opening time to this time. Afternoon is this time to closing.",
   verifiedEmailLabel: "People must verify their email before booking",

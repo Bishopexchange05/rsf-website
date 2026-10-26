@@ -2,21 +2,22 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { SettingsFrame, adminButton, adminInput, adminTextarea } from "@/components/admin/SettingsFrame";
 import { Card } from "@/components/Card";
-import { overnightPage } from "@/content/admin-settings";
+import { overnightPage, errors, notices } from "@/content/admin-settings";
 import { requireRole } from "@/lib/auth";
 import { noIndex } from "@/lib/no-index";
 import { saveOvernightAction } from "@/lib/settings-actions";
 import { accountsEnabled } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
+import { ActionForm } from "@/components/ActionForm";
+import { PendingButton } from "@/components/PendingButton";
 
 export const metadata: Metadata = { title: overnightPage.title, ...noIndex };
 
 const hhmm = (t: unknown) => (typeof t === "string" ? t.slice(0, 5) : "");
 
-export default async function Page({ searchParams }: { searchParams: Promise<{ notice?: string; error?: string }> }) {
+export default async function Page() {
   if (!accountsEnabled) notFound();
   await requireRole(["admin"]);
-  const { notice, error } = await searchParams;
   const supabase = await createClient();
   const { data } = await supabase
     .from("settings")
@@ -24,8 +25,8 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ n
     .maybeSingle();
 
   return (
-    <SettingsFrame heading={overnightPage.heading} text={overnightPage.text} notice={notice} error={error}>
-      <form action={saveOvernightAction} className="space-y-4">
+    <SettingsFrame heading={overnightPage.heading} text={overnightPage.text}>
+      <ActionForm action={saveOvernightAction} notices={notices} errors={errors} className="space-y-4">
         <Card>
           <div className="flex flex-wrap gap-4">
             <div>
@@ -56,10 +57,10 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ n
           <textarea id="rules" name="rules" rows={6} maxLength={2000} defaultValue={data?.overnight_rules_text ?? ""} className={adminTextarea} />
           <p className="mt-1 text-sm opacity-75">{overnightPage.rulesHelp}</p>
         </Card>
-        <button type="submit" className={adminButton}>
+        <PendingButton className={adminButton}>
           {overnightPage.save}
-        </button>
-      </form>
+        </PendingButton>
+      </ActionForm>
     </SettingsFrame>
   );
 }

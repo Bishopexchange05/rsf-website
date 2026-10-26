@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Form from "next/form";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AdminShell } from "@/components/admin/AdminShell";
@@ -9,6 +10,8 @@ import { requireRole } from "@/lib/auth";
 import { noIndex } from "@/lib/no-index";
 import { accountsEnabled } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
+import { ActionForm } from "@/components/ActionForm";
+import { PendingButton } from "@/components/PendingButton";
 
 export const metadata: Metadata = { title: adminUsers.title, ...noIndex };
 
@@ -66,17 +69,17 @@ export default async function Page({
         </p>
       )}
 
-      <form className="mb-6 flex flex-wrap items-end gap-3" method="get">
+      <Form action="/admin/users" className="mb-6 flex flex-wrap items-end gap-3">
         <div className="min-w-0 flex-1">
           <label htmlFor="q" className="mb-1.5 block text-sm font-semibold">
             {adminUsers.searchLabel}
           </label>
           <input id="q" name="q" type="search" defaultValue={search} maxLength={80} className={`${input} w-full`} />
         </div>
-        <button type="submit" className={smallButton}>
+        <PendingButton className={smallButton}>
           {adminUsers.searchButton}
-        </button>
-      </form>
+        </PendingButton>
+      </Form>
 
       {rows.length === 0 ? (
         <p>{adminUsers.empty}</p>
@@ -113,7 +116,7 @@ export default async function Page({
 
                   {!self && (
                     <div className="mt-4 space-y-4 border-t border-slate-navy/10 pt-4 dark:border-white/10">
-                      <form action={setRoleAction} className="flex flex-wrap items-end gap-3">
+                      <ActionForm action={setRoleAction} notices={adminUsers.notices} errors={adminUsers.errors} className="flex flex-wrap items-end gap-3">
                         <input type="hidden" name="target" value={r.id} />
                         <div>
                           <label htmlFor={`role-${r.id}`} className="mb-1.5 block text-sm font-semibold">
@@ -125,25 +128,25 @@ export default async function Page({
                             <option value="admin">{adminUsers.roles.admin}</option>
                           </select>
                         </div>
-                        <button type="submit" className={smallButton}>
+                        <PendingButton className={smallButton}>
                           {adminUsers.saveRole}
-                        </button>
-                      </form>
+                        </PendingButton>
+                      </ActionForm>
 
-                      <form action={setActiveAction}>
+                      <ActionForm action={setActiveAction} notices={adminUsers.notices} errors={adminUsers.errors}>
                         <input type="hidden" name="target" value={r.id} />
                         <input type="hidden" name="active" value={r.is_active ? "false" : "true"} />
-                        <button type="submit" className={smallButton}>
+                        <PendingButton className={smallButton}>
                           {r.is_active ? adminUsers.deactivate : adminUsers.reactivate}
-                        </button>
-                      </form>
+                        </PendingButton>
+                      </ActionForm>
 
                       {privileged && (
                         <details>
                           <summary className="min-h-11 cursor-pointer py-2 text-sm font-semibold underline underline-offset-2">
                             {adminUsers.resetSummary}
                           </summary>
-                          <form action={resetMfaAction} className="mt-3 space-y-3">
+                          <ActionForm action={resetMfaAction} notices={adminUsers.notices} errors={adminUsers.errors} className="mt-3 space-y-3">
                             <p className="text-sm opacity-85">{adminUsers.resetHelp}</p>
                             <input type="hidden" name="target" value={r.id} />
                             <div>
@@ -152,10 +155,10 @@ export default async function Page({
                               </label>
                               <input id={`confirm-${r.id}`} name="confirmEmail" type="email" required autoComplete="off" className={`${input} w-full`} />
                             </div>
-                            <button type="submit" className={smallButton}>
+                            <PendingButton className={smallButton}>
                               {adminUsers.resetButton}
-                            </button>
-                          </form>
+                            </PendingButton>
+                          </ActionForm>
                         </details>
                       )}
                     </div>

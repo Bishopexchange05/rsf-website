@@ -19,7 +19,7 @@ export function AdminShell({
   return (
     <>
       <PageHero label={admin.label} heading={heading} text={text} image={media.hero} compact />
-      <Section tone="cream">
+      <Section tone="cream" className="min-h-[70vh]">
         <nav aria-label="Admin" className="mb-8 flex flex-wrap gap-2">
           <Link href="/admin" className="inline-flex min-h-11 items-center rounded-full border border-navy/30 px-4 text-sm font-semibold hover:bg-navy hover:text-white dark:border-white/30 dark:hover:bg-white/15">
             {admin.title}

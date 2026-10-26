@@ -2,25 +2,26 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { SettingsFrame, adminButton, adminInput, adminTextarea } from "@/components/admin/SettingsFrame";
 import { Card } from "@/components/Card";
-import { bankPage } from "@/content/admin-settings";
+import { bankPage, errors, notices } from "@/content/admin-settings";
 import { requireRole } from "@/lib/auth";
 import { noIndex } from "@/lib/no-index";
 import { saveBankAction } from "@/lib/settings-actions";
 import { accountsEnabled } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
+import { ActionForm } from "@/components/ActionForm";
+import { PendingButton } from "@/components/PendingButton";
 
 export const metadata: Metadata = { title: bankPage.title, ...noIndex };
 
-export default async function Page({ searchParams }: { searchParams: Promise<{ notice?: string; error?: string }> }) {
+export default async function Page() {
   if (!accountsEnabled) notFound();
   await requireRole(["admin"]);
-  const { notice, error } = await searchParams;
   const supabase = await createClient();
   const { data } = await supabase.from("bank_details").select("bank_name, account_number, account_name, note").maybeSingle();
 
   return (
-    <SettingsFrame heading={bankPage.heading} text={bankPage.text} notice={notice} error={error}>
-      <form action={saveBankAction} className="space-y-4">
+    <SettingsFrame heading={bankPage.heading} text={bankPage.text}>
+      <ActionForm action={saveBankAction} notices={notices} errors={errors} className="space-y-4">
         <Card className="space-y-4">
           <div>
             <label htmlFor="bank_name" className="mb-1.5 block text-sm font-semibold">
@@ -57,10 +58,10 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ n
             <textarea id="note" name="note" rows={3} maxLength={300} defaultValue={data?.note ?? ""} className={adminTextarea} />
           </div>
         </Card>
-        <button type="submit" className={adminButton}>
+        <PendingButton className={adminButton}>
           {bankPage.save}
-        </button>
-      </form>
+        </PendingButton>
+      </ActionForm>
     </SettingsFrame>
   );
 }

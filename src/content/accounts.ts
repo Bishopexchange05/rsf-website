@@ -10,10 +10,15 @@ export const common = {
   show: "Show",
   hide: "Hide",
   sending: "Please wait…",
+  saving: "Saving…",
+  booking: "Booking…",
+  cancelling: "Cancelling…",
   fixFields: "Please check the highlighted fields.",
 };
 
 export const headerLink = { label: "Log in", href: "/login" };
+export const headerAccountLink = { label: "Account", href: "/account" };
+export const headerAdminLink = { label: "Admin", href: "/admin" };
 
 export const fields = {
   fullName: { label: "Full name", placeholder: "" },
@@ -291,7 +296,7 @@ export const auditLog = {
     "mfa.recovery_code_used": "Recovery code used",
     "sessions.ended": "Open sessions ended",
     "settings.hours": "Opening hours changed",
-    "settings.capacity": "Desks or beds changed",
+    "settings.capacity": "Day or overnight desks changed",
     "settings.prices": "Prices changed",
     "settings.rules": "Booking rules changed",
     "settings.overnight": "Overnight details changed",

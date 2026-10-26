@@ -131,7 +131,7 @@ Customers only see these after creating a booking (never on a public page).
 | reference | text unique | e.g. `RSF-7K3Q9M`: 6 characters from an alphabet without 0/O/1/I, generated server-side, retried on clash |
 | user_id | FK profiles | owner |
 | space_id | FK spaces | |
-| kind | enum | `hour`, `half_day`, `day`, `month`, `night` (the price option chosen). `month` on the day space is the monthly desk pass; `month` on the overnight space is a monthly bed |
+| kind | enum | `hour`, `half_day`, `day`, `month`, `night` (the price option chosen). `month` on the day space is the monthly desk pass; `month` on the overnight space is a monthly desk |
 | starts_at, ends_at | timestamptz | hour/half_day/day: within one opening day; month: start date to start date + `monthly_pass_days`; overnight: nights as check-in/out |
 | seats | int | 1 for now (one person per booking). Kept as a column so group bookings can come later |
 | status | enum | see 3.1 |
@@ -209,7 +209,7 @@ Terminal: `rejected`, `cancelled`, `expired`, `completed`, `no_show`.
 2. The team sees the request, invites the person to the office, and meets them. **ID is checked in person only; the website never has an upload field and never stores ID data.** Admin/Staff clicks **Approve** (-> `approved`) or **Reject**.
 3. On approval the member gets an email and the booking moves to `pending_payment` with the normal hold and bank-transfer steps.
 4. After payment is confirmed, the **location and house rules become visible to that member** on their booking page and in the confirmation email. Before that point the location text is not readable by anyone but Admin/Staff (section 5.5).
-5. The overnight capacity counts people per night. Check-in/out times come from settings. A single booking may be up to `overnight_max_nights`. Longer stays use the optional monthly bed (3.8), which is hidden unless an overnight monthly price is set.
+5. The overnight capacity counts people per night. Check-in/out times come from settings. A single booking may be up to `overnight_max_nights`. Longer stays use the optional monthly desk (3.8), which is hidden unless an overnight monthly price is set.
 Why approve-before-pay: nobody pays and then gets refused in person. If you prefer pay-then-approve, only the order of two steps changes.
 
 ### 3.5 Student prices
@@ -237,8 +237,8 @@ Templates: verify email and password reset (sent by Supabase Auth through our SM
 
 **Renewal.** A "Renew" button on an ending pass creates a new booking that starts the day after it ends. Desk availability is checked again at that moment (a renewal is not guaranteed unless it is paid before another member takes the desk). Reminder email 5 days before the end.
 
-### 3.8 Overnight monthly bed (optional)
-Only available when an overnight monthly price is set; otherwise hidden. A bed for 30 consecutive nights, counted against overnight capacity for every night in the window (capacity is people at once). It follows the same approve-first rule: the person is approved once in person, then pays by bank transfer, then the location is revealed. Cancellation and refund rules mirror 3.7. The per-night price is the standard option and is limited to `overnight_max_nights` per booking.
+### 3.8 Overnight monthly desk (optional)
+Only available when an overnight monthly price is set; otherwise hidden. A desk for 30 consecutive nights, counted against overnight capacity for every night in the window (capacity is people at once). It follows the same approve-first rule: the person is approved once in person, then pays by bank transfer, then the location is revealed. Cancellation and refund rules mirror 3.7. The per-night price is the standard option and is limited to `overnight_max_nights` per booking.
 
 ---
 
@@ -459,7 +459,7 @@ Each milestone is built on `phase-2`, tested on a Vercel preview deployment of t
 
 ### M7. Overnight workspace
 - 18+ checkbox, `pending_approval` -> approve/reject screen for staff, then payment, then private location reveal.
-- Overnight capacity per night; `overnight_max_nights`; house rules text; optional monthly bed (only if its price is set).
+- Overnight capacity per night; `overnight_max_nights`; house rules text; optional monthly desk (only if its price is set).
 - Explicit test that no page, API response or email leaks the location early, and that no upload field exists.
 
 ### M8. Hardening, NDPA and launch
@@ -535,7 +535,7 @@ Each milestone is built on `phase-2`, tested on a Vercel preview deployment of t
 - No 18+ tick: cannot request overnight. No upload field anywhere (inspect page and network).
 - Location text is absent from HTML, API responses and emails until payment is confirmed; a second member and a signed-out visitor never get it.
 - Approval, rejection, and capacity per night all work; approving does not exceed capacity. Bookings longer than `overnight_max_nights` are refused.
-- Overnight monthly bed is hidden when its price is blank and behaves like 3.8 when set. There is no student price for overnight.
+- Overnight monthly desk is hidden when its price is blank and behaves like 3.8 when set. There is no student price for overnight.
 
 **M8**
 - Download-my-data returns only that member's data.
@@ -576,7 +576,7 @@ Each milestone is built on `phase-2`, tested on a Vercel preview deployment of t
 - Q10. Whether the Foundation's accountant needs **financial records kept longer than 12 months** (default: 12 months, then anonymise).
 - Q11. Wording for the **Terms of use** of booking (no-shows, behaviour, liability); I will draft, your lawyer should review.
 - Q12. Decided: monthly pass = 30 consecutive calendar days from the start date (Sundays and other closed days still count, and the website must say so clearly). Pass desk cap = 10 of 30, editable by Admin. The student price (if set) also applies to the monthly pass.
-- Q13. **Overnight monthly price:** offer a monthly bed at all? (default: not at launch; leave the price blank and it stays hidden).
+- Q13. **Overnight monthly price:** offer a monthly desk at all? (default: not at launch; leave the price blank and it stays hidden).
 - Q14. Decided: the main sender is a dedicated Gmail account (address only in environment variables) with display name "Rafael Support Foundation", over Gmail SMTP with an app password. Reply-To is the requests inbox via `REPLY_TO_EMAIL`. The info@rafaelsupportfoundation.org mailbox is not used for now. Form submissions keep going to the requests inbox via `FORMS_TO_EMAIL`.
 
 Out of scope for this plan (listed in CLAUDE.md as Phase 2 but later): courses/LMS, quizzes and certificates, consulting payments, SMS. They reuse the same accounts and admin area, so nothing here blocks them. SMS one-time codes (option B) are not part of this plan.
@@ -599,6 +599,7 @@ Out of scope for this plan (listed in CLAUDE.md as Phase 2 but later): courses/L
 - **M1 approved as finished by the owner (19 October 2026).** Accepted open items: the app-email Reply-To is untested until M5 (Avast blocks local SMTP), and real PageSpeed Insights for the account build is checked after the domain is public. M2 has not started and needs separate approval.
 - **M2 approved to start (19 October 2026).** 2FA is authenticator-app codes (TOTP), required for Admin and Staff, enforced on the server and in the database (a Staff or Admin without a verified 2FA session is treated as a Member). Recovery: 10 one-time recovery codes (hashed; Supabase has none built in), another Admin can reset someone's 2FA (confirmed by typing their email, audited, emailed), and the Supabase dashboard is the last-resort backstop. The Supabase service-role key (server only) is introduced in M2 for resets, recovery codes, audit/email logging and the database rate limiter. TOTP on the Supabase Free plan: Supabase docs say the TOTP API is free and enabled on all projects.
 - **M2 approved as finished by the owner (23 October 2026).** Tested: Staff and Admin two-step setup with recovery codes, login code, recovery-code use, Admin reset, People page, audit log and filters, email-failure logging, and ending sessions on reset and on recovery-code use. Two bugs found and fixed during testing: the recovery codes screen was lost after setup, and a stale session note sent people back to the code page after their authenticator was removed. Migrations run on the development database: 0001, 0002, 0003. Accepted open items: the 2FA notice emails fail on the owner's PC because Avast blocks local SMTP (test them on the Vercel preview); the app-email Reply-To stays untested until it can be sent from Vercel. M3 has not started and needs separate approval.
-- **M3 started (23 October 2026) with these decisions:** overnight capacity 6 beds, editable in Settings; half-day price wanted, with the split at 1:00 PM (the Admin enters the price); no public-holiday list for now; no overnight monthly bed (blank and hidden); **students are not free, they pay an optional lower price (student day price starts at 1,000 naira, hour and month student prices optional)**; all other prices blank; the public hours-and-prices display stays hidden behind the booking switch. The CLAUDE.md rule "no prices on the site" is to be updated only when the owner confirms the real prices and says so.
-- **M3 approved as finished by the owner (23 October 2026).** Tested: Settings pages (hours, desks and beds, prices with student prices, booking rules, overnight details, bank details), the booking switch, audit entries, the public hours-and-prices block on Tech & Space when booking is on, and Staff being blocked from Settings. Migration run on the development database: 0004. The public display stays hidden behind the booking switch, and CLAUDE.md's no-prices rule is unchanged until the owner confirms real prices. M4 has not started and needs separate approval.
+- **M3 started (23 October 2026) with these decisions:** overnight capacity 6 desks, editable in Settings; half-day price wanted, with the split at 1:00 PM (the Admin enters the price); no public-holiday list for now; no overnight monthly desk (blank and hidden); **students are not free, they pay an optional lower price (student day price starts at 1,000 naira, hour and month student prices optional)**; all other prices blank; the public hours-and-prices display stays hidden behind the booking switch. The CLAUDE.md rule "no prices on the site" is to be updated only when the owner confirms the real prices and says so.
+- **M3 approved as finished by the owner (23 October 2026).** Tested: Settings pages (hours, desks (day and overnight), prices with student prices, booking rules, overnight details, bank details), the booking switch, audit entries, the public hours-and-prices block on Tech & Space when booking is on, and Staff being blocked from Settings. Migration run on the development database: 0004. The public display stays hidden behind the booking switch, and CLAUDE.md's no-prices rule is unchanged until the owner confirms real prices. M4 has not started and needs separate approval.
 - **M4 started (23 October 2026) with these decisions:** a student price applies and shows only when the matching standard price is set (entry in any order is allowed; the 1,000 naira student day price stays as the starting value); hour slots on the hour; defaults confirmed (30 days ahead, 10 hours longest, cancel until 24 hours before, at most 3 unpaid bookings, all editable in Settings); pg_cron for hold expiry; reminder emails left for M8; a read-only pay screen is included in M4 (the I've-paid button and admin confirmation are M5).
+- **M4 owner review changes (26 October 2026):** wording "overnight beds" became "overnight desks" everywhere (migration 0007); the hourly booking picker is now click-the-first-hour then click-the-last-hour with a live summary; the header shows Account (and Admin for Staff and Admin) after login using a small browser-side check so public pages are not slowed; the monthly pass settings gained a plain-language explanation; and the page-goes-blank-after-Save problem was fixed (cause: a redirect to the same page with a query string leaves Next.js showing an empty page while the server rebuilds it; forms now answer in place, buttons show a pending state, and loading skeletons plus a minimum height keep the footer still).

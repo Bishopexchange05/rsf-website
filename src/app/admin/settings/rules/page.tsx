@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { SettingsFrame, adminButton, adminInput } from "@/components/admin/SettingsFrame";
 import { Card } from "@/components/Card";
-import { rulesPage } from "@/content/admin-settings";
+import { ActionForm } from "@/components/ActionForm";
+import { PendingButton } from "@/components/PendingButton";
+import { rulesPage, errors, notices } from "@/content/admin-settings";
 import { requireRole } from "@/lib/auth";
 import { noIndex } from "@/lib/no-index";
 import { saveRulesAction } from "@/lib/settings-actions";
@@ -11,36 +13,46 @@ import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: rulesPage.title, ...noIndex };
 
-export default async function Page({ searchParams }: { searchParams: Promise<{ notice?: string; error?: string }> }) {
+type Field = (typeof rulesPage.fields)[number];
+
+export default async function Page() {
   if (!accountsEnabled) notFound();
   await requireRole(["admin"]);
-  const { notice, error } = await searchParams;
   const supabase = await createClient();
   const { data } = await supabase.from("settings").select("*").maybeSingle();
   const s = (data ?? {}) as Record<string, number | string | boolean | null>;
 
+  const general = rulesPage.fields.filter((f) => !f.name.startsWith("monthly_") && !f.name.startsWith("overnight_"));
+  const monthly = rulesPage.fields.filter((f) => f.name.startsWith("monthly_"));
+  const overnight = rulesPage.fields.filter((f) => f.name.startsWith("overnight_"));
+  const days = Number(s.monthly_pass_days ?? 30);
+  const maxDesks = Number(s.monthly_pass_max_desks ?? 10);
+
+  const numberCard = (f: Field) => (
+    <Card key={f.name}>
+      <label htmlFor={f.name} className="mb-1.5 block text-sm font-semibold">
+        {f.label}
+      </label>
+      <input
+        id={f.name}
+        name={f.name}
+        type="number"
+        inputMode="numeric"
+        min={f.min}
+        max={f.max}
+        required
+        defaultValue={s[f.name] as number | undefined}
+        className={`${adminInput} max-w-40`}
+      />
+      <p className="mt-1 text-sm opacity-75">{f.help}</p>
+    </Card>
+  );
+
   return (
-    <SettingsFrame heading={rulesPage.heading} text={rulesPage.text} notice={notice} error={error}>
-      <form action={saveRulesAction} className="space-y-4">
-        {rulesPage.fields.map((f) => (
-          <Card key={f.name}>
-            <label htmlFor={f.name} className="mb-1.5 block text-sm font-semibold">
-              {f.label}
-            </label>
-            <input
-              id={f.name}
-              name={f.name}
-              type="number"
-              inputMode="numeric"
-              min={f.min}
-              max={f.max}
-              required
-              defaultValue={s[f.name] as number | undefined}
-              className={`${adminInput} max-w-40`}
-            />
-            <p className="mt-1 text-sm opacity-75">{f.help}</p>
-          </Card>
-        ))}
+    <SettingsFrame heading={rulesPage.heading} text={rulesPage.text}>
+      <ActionForm action={saveRulesAction} notices={notices} errors={errors} className="space-y-4">
+        {general.map(numberCard)}
+
         <Card>
           <label htmlFor="half_day_split" className="mb-1.5 block text-sm font-semibold">
             {rulesPage.halfDayLabel}
@@ -48,6 +60,16 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ n
           <input id="half_day_split" name="half_day_split" type="time" required defaultValue={String(s.half_day_split ?? "13:00").slice(0, 5)} className={`${adminInput} max-w-40`} />
           <p className="mt-1 text-sm opacity-75">{rulesPage.halfDayHelp}</p>
         </Card>
+
+        <h2 className="pt-4 text-h3">{rulesPage.monthlyHeading}</h2>
+        <div className="rounded-2xl border-l-4 border-brand-green bg-white p-4 text-sm shadow-sm dark:bg-dark-card">
+          <p>{rulesPage.monthlyExplain(days, maxDesks)}</p>
+        </div>
+        {monthly.map(numberCard)}
+
+        <h2 className="pt-4 text-h3">{rulesPage.overnightHeading}</h2>
+        {overnight.map(numberCard)}
+
         <Card>
           <label className="flex min-h-11 items-start gap-3">
             <input type="checkbox" name="require_verified_email" defaultChecked={!!s.require_verified_email} className="mt-1 h-5 w-5 shrink-0 accent-navy" />
@@ -57,10 +79,8 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ n
             </span>
           </label>
         </Card>
-        <button type="submit" className={adminButton}>
-          {rulesPage.save}
-        </button>
-      </form>
+        <PendingButton className={adminButton}>{rulesPage.save}</PendingButton>
+      </ActionForm>
     </SettingsFrame>
   );
 }

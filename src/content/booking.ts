@@ -34,8 +34,14 @@ export const bookPage = {
   nothingToBook: "There is nothing to book on that day.",
   hourly: {
     heading: "By the hour",
-    startLabel: "Start time",
-    hoursLabel: "How many hours",
+    pickLegend: "Choose your hours",
+    pickStart: (max: number) => `Click the first hour you want. You can book up to ${max} hours in a row.`,
+    pickEnd: "Now click the last hour you want. Every hour in between is included. Or press Book to take just this one hour.",
+    nothingYet: "No hours chosen yet.",
+    summary: (from: string, to: string, hours: number, price: string) =>
+      `${from} to ${to}, ${hours === 1 ? "1 hour" : `${hours} hours`}, ${price}`,
+    notAvailableHere: "Not available for this choice.",
+    clear: "Clear",
     submit: "Book these hours",
     left: (n: number) => (n === 1 ? "1 desk left" : `${n} desks left`),
     full: "Full",

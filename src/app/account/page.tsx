@@ -11,6 +11,7 @@ import { adminConfigured, createAdminClient } from "@/lib/supabase/admin";
 import { signOutAction } from "@/lib/auth-actions";
 import { noIndex } from "@/lib/no-index";
 import { accountsEnabled } from "@/lib/supabase/config";
+import { PendingButton } from "@/components/PendingButton";
 
 export const metadata: Metadata = { title: account.title, ...noIndex };
 
@@ -81,12 +82,11 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ n
       )}
 
       <form action={signOutAction} className="mt-8">
-        <button
-          type="submit"
+        <PendingButton
           className="inline-flex min-h-12 w-full items-center justify-center rounded-full border-2 border-navy px-7 py-3 font-heading text-base text-navy transition hover:bg-navy hover:text-white dark:border-dark-green dark:text-dark-green dark:hover:bg-dark-green dark:hover:text-dark-bg"
         >
           {account.signOut}
-        </button>
+        </PendingButton>
       </form>
     </AuthPage>
   );

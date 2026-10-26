@@ -19,7 +19,7 @@ export function AuthPage({
   return (
     <>
       <PageHero label={label} heading={heading} text={text} image={media.hero} />
-      <Section tone="cream">
+      <Section tone="cream" className="min-h-[70vh]">
         <div className="mx-auto max-w-lg">
           <Card className="p-6 sm:p-8">{children}</Card>
         </div>

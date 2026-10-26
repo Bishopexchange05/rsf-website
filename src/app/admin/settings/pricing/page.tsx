@@ -2,22 +2,23 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { SettingsFrame, adminButton, adminInput } from "@/components/admin/SettingsFrame";
 import { Card } from "@/components/Card";
-import { pricingPage } from "@/content/admin-settings";
+import { pricingPage, errors, notices } from "@/content/admin-settings";
 import { requireRole } from "@/lib/auth";
 import { noIndex } from "@/lib/no-index";
 import { koboToNaira } from "@/lib/settings-validation";
 import { savePricesAction } from "@/lib/settings-actions";
 import { accountsEnabled } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
+import { ActionForm } from "@/components/ActionForm";
+import { PendingButton } from "@/components/PendingButton";
 
 export const metadata: Metadata = { title: pricingPage.title, ...noIndex };
 
 type PriceRow = { kind: string; audience: string; amount_kobo: number | null; spaces: { slug: string } | { slug: string }[] | null };
 
-export default async function Page({ searchParams }: { searchParams: Promise<{ notice?: string; error?: string }> }) {
+export default async function Page() {
   if (!accountsEnabled) notFound();
   await requireRole(["admin"]);
-  const { notice, error } = await searchParams;
   const supabase = await createClient();
   const { data } = await supabase.from("prices").select("kind, audience, amount_kobo, spaces(slug)");
   const current = new Map<string, number | null>();
@@ -27,7 +28,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ n
   }
 
   return (
-    <SettingsFrame heading={pricingPage.heading} text={pricingPage.text} notice={notice} error={error}>
+    <SettingsFrame heading={pricingPage.heading} text={pricingPage.text}>
       <Card className="mb-6">
         <h2 className="text-h3">{pricingPage.rulesHeading}</h2>
         <ul className="mt-3 list-disc space-y-1 pl-5 text-sm">
@@ -37,7 +38,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ n
         </ul>
       </Card>
 
-      <form action={savePricesAction} className="space-y-6">
+      <ActionForm action={savePricesAction} notices={notices} errors={errors} className="space-y-6">
         {pricingPage.groups.map((g) => (
           <Card key={g.heading}>
             <h2 className="text-h3">{g.heading}</h2>
@@ -70,10 +71,10 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ n
             </div>
           </Card>
         ))}
-        <button type="submit" className={adminButton}>
+        <PendingButton className={adminButton}>
           {pricingPage.save}
-        </button>
-      </form>
+        </PendingButton>
+      </ActionForm>
     </SettingsFrame>
   );
 }

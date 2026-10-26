@@ -4,7 +4,8 @@ import { notFound } from "next/navigation";
 import { BookingShell, bookOutline } from "@/components/booking/BookingShell";
 import { HoldCountdown } from "@/components/booking/HoldCountdown";
 import { Card } from "@/components/Card";
-import { bookingPage, myBookings } from "@/content/booking";
+import { common } from "@/content/accounts";
+import { bookingPage, errors as bookingErrors, myBookings, notices as bookingNotices } from "@/content/booking";
 import { requireUser } from "@/lib/auth";
 import { cancelBookingAction } from "@/lib/booking-actions";
 import { dayLabel, timeLabel } from "@/lib/lagos";
@@ -12,6 +13,8 @@ import { noIndex } from "@/lib/no-index";
 import { formatNaira } from "@/lib/settings-validation";
 import { accountsEnabled } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
+import { ActionForm } from "@/components/ActionForm";
+import { PendingButton } from "@/components/PendingButton";
 
 export const metadata: Metadata = { title: bookingPage.title, ...noIndex };
 
@@ -33,13 +36,13 @@ export default async function Page({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ notice?: string; error?: string }>;
+  searchParams: Promise<{ notice?: string }>;
 }) {
   if (!accountsEnabled) notFound();
   const { user } = await requireUser();
   const { id } = await params;
   if (!/^[0-9a-fA-F-]{36}$/.test(id)) notFound();
-  const { notice, error } = await searchParams;
+  const { notice } = await searchParams;
 
   const supabase = await createClient();
   const { data } = await supabase
@@ -63,7 +66,7 @@ export default async function Page({
   const canCancel = status === "pending_payment" || status === "confirmed";
 
   return (
-    <BookingShell label="RSF Tech & Space" heading={bookingPage.heading} text={myBookings.kinds[b.kind] ?? b.kind} notice={notice} error={error}>
+    <BookingShell label="RSF Tech & Space" heading={bookingPage.heading} text={myBookings.kinds[b.kind] ?? b.kind} notice={notice}>
       <Card>
         <dl className="space-y-2">
           <div className="flex flex-wrap justify-between gap-x-4">
@@ -131,13 +134,13 @@ export default async function Page({
       {status === "expired" && <p className="mt-6">{bookingPage.pay.expired}</p>}
 
       {canCancel && (
-        <form action={cancelBookingAction} className="mt-6">
+        <ActionForm action={cancelBookingAction} notices={bookingNotices} errors={bookingErrors} className="mt-6">
           <input type="hidden" name="booking" value={b.id} />
           <p className="mb-3 text-sm opacity-85">{status === "confirmed" ? bookingPage.cancel.confirmedHelp : bookingPage.cancel.help}</p>
-          <button type="submit" className={bookOutline}>
+          <PendingButton className={bookOutline} pendingText={common.cancelling}>
             {bookingPage.cancel.button}
-          </button>
-        </form>
+          </PendingButton>
+        </ActionForm>
       )}
 
       <p className="mt-8 text-sm">

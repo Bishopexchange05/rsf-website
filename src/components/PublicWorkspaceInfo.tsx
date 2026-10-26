@@ -16,7 +16,7 @@ type Pub = {
   booking_enabled: true;
   hours: { weekday: number; is_closed: boolean; opens_at: string | null; closes_at: string | null }[];
   day_desks: number;
-  overnight_beds: number;
+  overnight_desks: number;
   half_day_split: string;
   monthly_pass_days: number;
   prices: { space: string; kind: string; audience: string; amount_kobo: number }[];

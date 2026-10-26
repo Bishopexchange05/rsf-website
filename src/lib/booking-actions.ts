@@ -1,6 +1,8 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import type { ActionResult } from "@/lib/action-result";
 import { requireUser } from "@/lib/auth";
 import { sendLoggedEmail } from "@/lib/email/log";
 import { dateTimeLabel, dayLabel, isIsoDate, timeLabel } from "@/lib/lagos";
@@ -40,17 +42,18 @@ function errorCode(error: { code?: string; message?: string }): string {
   return "failed";
 }
 
-function backToBook(date: string, error: string): never {
-  const q = new URLSearchParams({ error });
-  if (isIsoDate(date)) q.set("date", date);
-  redirect(`/book?${q.toString()}`);
+// A booking problem is shown in place, under the form. If the desks changed under the
+// person (someone else booked first), the page is refreshed so the counts are right.
+function problem(error: string): ActionResult {
+  if (error === "unavailable" || error === "overlap" || error === "too-many-unpaid") revalidatePath("/book");
+  return { error };
 }
 
-export async function createBookingAction(fd: FormData): Promise<void> {
+export async function createBookingAction(fd: FormData): Promise<ActionResult> {
   const session = await requireUser();
   const date = text(fd, "date");
   const kind = text(fd, "kind");
-  if (!isIsoDate(date) || !["hour", "half_day", "day"].includes(kind)) backToBook(date, "invalid");
+  if (!isIsoDate(date) || !["hour", "half_day", "day"].includes(kind)) return problem("invalid");
 
   let start: string | null = null;
   let hours: number | null = null;
@@ -58,13 +61,13 @@ export async function createBookingAction(fd: FormData): Promise<void> {
   if (kind === "hour") {
     start = parseTime(text(fd, "start"));
     hours = parseIntIn(text(fd, "hours"), 1, 14);
-    if (!start || hours === null) backToBook(date, "invalid");
+    if (!start || hours === null) return problem("invalid");
   } else if (kind === "half_day") {
     half = text(fd, "half");
-    if (!["morning", "afternoon"].includes(half)) backToBook(date, "invalid");
+    if (!["morning", "afternoon"].includes(half)) return problem("invalid");
   }
 
-  if (await limited(`book:${session.user.id}`, 15, HOUR)) backToBook(date, "too-many");
+  if (await limited(`book:${session.user.id}`, 15, HOUR)) return problem("too-many");
 
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("create_day_booking", {
@@ -75,7 +78,7 @@ export async function createBookingAction(fd: FormData): Promise<void> {
     p_half: half,
     p_student: text(fd, "student") === "on",
   });
-  if (error || typeof data !== "string") backToBook(date, error ? errorCode(error) : "failed");
+  if (error || typeof data !== "string") return problem(error ? errorCode(error) : "failed");
 
   const id = data as string;
 
@@ -108,13 +111,16 @@ export async function createBookingAction(fd: FormData): Promise<void> {
   redirect(`/account/bookings/${id}?notice=created`);
 }
 
-export async function cancelBookingAction(fd: FormData): Promise<void> {
+export async function cancelBookingAction(fd: FormData): Promise<ActionResult> {
   await requireUser();
   const id = text(fd, "booking");
-  if (!UUID.test(id)) redirect("/account/bookings");
+  if (!UUID.test(id)) return { error: "failed" };
 
   const supabase = await createClient();
   const { error } = await supabase.rpc("cancel_my_booking", { p_booking: id });
-  if (error) redirect(`/account/bookings/${id}?error=${errorCode(error)}`);
-  redirect(`/account/bookings/${id}?notice=cancelled`);
+  if (error) return { error: errorCode(error) };
+  revalidatePath(`/account/bookings/${id}`);
+  revalidatePath("/account/bookings");
+  revalidatePath("/book");
+  return { notice: "cancelled" };
 }

@@ -2,12 +2,14 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { SettingsFrame, adminButton, adminInput } from "@/components/admin/SettingsFrame";
 import { Card } from "@/components/Card";
-import { hoursPage, weekdays } from "@/content/admin-settings";
+import { hoursPage, weekdays, errors, notices } from "@/content/admin-settings";
 import { requireRole } from "@/lib/auth";
 import { noIndex } from "@/lib/no-index";
 import { saveHoursAction } from "@/lib/settings-actions";
 import { accountsEnabled } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
+import { ActionForm } from "@/components/ActionForm";
+import { PendingButton } from "@/components/PendingButton";
 
 export const metadata: Metadata = { title: hoursPage.title, ...noIndex };
 
@@ -15,17 +17,16 @@ type Row = { weekday: number; is_closed: boolean; opens_at: string | null; close
 
 const hhmm = (t: string | null) => (t ? t.slice(0, 5) : "");
 
-export default async function Page({ searchParams }: { searchParams: Promise<{ notice?: string; error?: string }> }) {
+export default async function Page() {
   if (!accountsEnabled) notFound();
   await requireRole(["admin"]);
-  const { notice, error } = await searchParams;
   const supabase = await createClient();
   const { data } = await supabase.from("opening_hours").select("weekday, is_closed, opens_at, closes_at").order("weekday");
   const rows = (data as Row[] | null) ?? [];
 
   return (
-    <SettingsFrame heading={hoursPage.heading} text={hoursPage.text} notice={notice} error={error}>
-      <form action={saveHoursAction}>
+    <SettingsFrame heading={hoursPage.heading} text={hoursPage.text}>
+      <ActionForm action={saveHoursAction} notices={notices} errors={errors}>
         <ul className="space-y-4">
           {rows.map((r) => (
             <li key={r.weekday}>
@@ -53,10 +54,10 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ n
             </li>
           ))}
         </ul>
-        <button type="submit" className={`${adminButton} mt-6`}>
+        <PendingButton className={`${adminButton} mt-6`}>
           {hoursPage.save}
-        </button>
-      </form>
+        </PendingButton>
+      </ActionForm>
     </SettingsFrame>
   );
 }

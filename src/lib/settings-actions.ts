@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
+import type { ActionResult } from "@/lib/action-result";
 import { requireRole } from "@/lib/auth";
 import { sendLoggedEmail } from "@/lib/email/log";
 import { nairaToKobo, parseIntIn, parseTime } from "@/lib/settings-validation";
@@ -10,8 +10,9 @@ import { bankPage, pricingPage, rulesPage } from "@/content/admin-settings";
 
 // Admin-only settings actions. Each one: requireRole (an Admin who has passed
 // two-step), validate, call the database function (which checks the role again,
-// validates again and writes the audit log), then go back to the page with a
-// short code that the page turns into a message. No personal data goes in the address.
+// validates again and writes the audit log), then answer with a short code that the
+// form turns into a message IN PLACE. They never redirect to the same page, because
+// that blanks the page for a moment while the server rebuilds it.
 
 const BASE = "/admin/settings";
 
@@ -20,11 +21,14 @@ function text(fd: FormData, name: string): string {
   return typeof v === "string" ? v : "";
 }
 
-function go(section: string, key: "notice" | "error", code: string): never {
-  const path = section ? `${BASE}/${section}` : BASE;
-  revalidatePath(path);
+function done(section: string, code = "saved"): ActionResult {
+  revalidatePath(section ? `${BASE}/${section}` : BASE);
   revalidatePath("/tech-and-space");
-  redirect(`${path}?${key}=${code}`);
+  return { notice: code };
+}
+
+function bad(code: string): ActionResult {
+  return { error: code };
 }
 
 // Turns a database error into one of the page's error codes.
@@ -44,7 +48,7 @@ function errorCode(error: { code?: string; message?: string }): string {
 
 // ----------------------------------------------------------------- hours
 
-export async function saveHoursAction(fd: FormData): Promise<void> {
+export async function saveHoursAction(fd: FormData): Promise<ActionResult> {
   await requireRole(["admin"]);
   const hours: { weekday: number; is_closed: boolean; opens_at: string | null; closes_at: string | null }[] = [];
   for (let day = 1; day <= 7; day++) {
@@ -55,88 +59,88 @@ export async function saveHoursAction(fd: FormData): Promise<void> {
     }
     const opens = parseTime(text(fd, `open-${day}`));
     const closes = parseTime(text(fd, `close-${day}`));
-    if (!opens || !closes || closes <= opens) go("hours", "error", "time");
+    if (!opens || !closes || closes <= opens) return bad("time");
     hours.push({ weekday: day, is_closed: false, opens_at: opens, closes_at: closes });
   }
   const supabase = await createClient();
   const { error } = await supabase.rpc("save_opening_hours", { p_hours: hours });
-  if (error) go("hours", "error", errorCode(error));
-  go("hours", "notice", "saved");
+  if (error) return bad(errorCode(error));
+  return done("hours");
 }
 
 // -------------------------------------------------------------- capacity
 
-export async function saveCapacityAction(fd: FormData): Promise<void> {
+export async function saveCapacityAction(fd: FormData): Promise<ActionResult> {
   await requireRole(["admin"]);
   const day = parseIntIn(text(fd, "day_capacity"), 0, 1000);
   const overnight = parseIntIn(text(fd, "overnight_capacity"), 0, 1000);
-  if (day === null || overnight === null) go("capacity", "error", "number");
+  if (day === null || overnight === null) return bad("number");
 
   const supabase = await createClient();
   const a = await supabase.rpc("save_capacity", { p_slug: "day", p_capacity: day, p_bookable: text(fd, "day_bookable") === "on" });
-  if (a.error) go("capacity", "error", errorCode(a.error));
+  if (a.error) return bad(errorCode(a.error));
   const b = await supabase.rpc("save_capacity", {
     p_slug: "overnight",
     p_capacity: overnight,
     p_bookable: text(fd, "overnight_bookable") === "on",
   });
-  if (b.error) go("capacity", "error", errorCode(b.error));
-  go("capacity", "notice", "saved");
+  if (b.error) return bad(errorCode(b.error));
+  return done("capacity");
 }
 
 // ---------------------------------------------------------------- prices
 
-export async function savePricesAction(fd: FormData): Promise<void> {
+export async function savePricesAction(fd: FormData): Promise<ActionResult> {
   await requireRole(["admin"]);
   const rows: { space: string; kind: string; audience: string; amount_kobo: number | null }[] = [];
   for (const group of pricingPage.groups) {
     for (const r of group.rows) {
       const value = nairaToKobo(text(fd, `price-${r.space}-${r.kind}-${r.audience}`));
-      if (value === "invalid") go("pricing", "error", "price");
+      if (value === "invalid") return bad("price");
       rows.push({ space: r.space, kind: r.kind, audience: r.audience, amount_kobo: value });
     }
   }
   // Student price may never exceed the standard price for the same option.
   for (const s of rows.filter((r) => r.audience === "student" && r.amount_kobo !== null)) {
     const standard = rows.find((r) => r.audience === "standard" && r.space === s.space && r.kind === s.kind);
-    if (standard?.amount_kobo != null && (s.amount_kobo as number) > standard.amount_kobo) go("pricing", "error", "student-higher");
+    if (standard?.amount_kobo != null && (s.amount_kobo as number) > standard.amount_kobo) return bad("student-higher");
   }
   const supabase = await createClient();
   const { error } = await supabase.rpc("save_prices", { p_prices: rows });
-  if (error) go("pricing", "error", errorCode(error));
-  go("pricing", "notice", "saved");
+  if (error) return bad(errorCode(error));
+  return done("pricing");
 }
 
 // ----------------------------------------------------------------- rules
 
-export async function saveRulesAction(fd: FormData): Promise<void> {
+export async function saveRulesAction(fd: FormData): Promise<ActionResult> {
   await requireRole(["admin"]);
   const rules: Record<string, number | string | boolean> = {};
   for (const f of rulesPage.fields) {
     const n = parseIntIn(text(fd, f.name), f.min, f.max);
-    if (n === null) go("rules", "error", "number");
+    if (n === null) return bad("number");
     rules[f.name] = n;
   }
   const split = parseTime(text(fd, "half_day_split"));
-  if (!split) go("rules", "error", "time");
+  if (!split) return bad("time");
   rules.half_day_split = split;
   rules.require_verified_email = text(fd, "require_verified_email") === "on";
 
   const supabase = await createClient();
   const { error } = await supabase.rpc("save_booking_rules", { p_rules: rules });
-  if (error) go("rules", "error", errorCode(error));
-  go("rules", "notice", "saved");
+  if (error) return bad(errorCode(error));
+  return done("rules");
 }
 
 // ------------------------------------------------------------- overnight
 
-export async function saveOvernightAction(fd: FormData): Promise<void> {
+export async function saveOvernightAction(fd: FormData): Promise<ActionResult> {
   await requireRole(["admin"]);
   const checkinRaw = text(fd, "checkin").trim();
   const checkoutRaw = text(fd, "checkout").trim();
   const checkin = checkinRaw ? parseTime(checkinRaw) : null;
   const checkout = checkoutRaw ? parseTime(checkoutRaw) : null;
-  if ((checkinRaw && !checkin) || (checkoutRaw && !checkout)) go("overnight", "error", "time");
+  if ((checkinRaw && !checkin) || (checkoutRaw && !checkout)) return bad("time");
   const location = text(fd, "location").slice(0, 500);
   const rules = text(fd, "rules").slice(0, 2000);
 
@@ -147,16 +151,16 @@ export async function saveOvernightAction(fd: FormData): Promise<void> {
     p_checkin: checkin,
     p_checkout: checkout,
   });
-  if (error) go("overnight", "error", errorCode(error));
-  go("overnight", "notice", "saved");
+  if (error) return bad(errorCode(error));
+  return done("overnight");
 }
 
 // ------------------------------------------------------------------ bank
 
-export async function saveBankAction(fd: FormData): Promise<void> {
+export async function saveBankAction(fd: FormData): Promise<ActionResult> {
   const session = await requireRole(["admin"]);
   const number = text(fd, "account_number").replace(/\s/g, "");
-  if (number && !/^\d{10}$/.test(number)) go("bank", "error", "account-number");
+  if (number && !/^\d{10}$/.test(number)) return bad("account-number");
 
   const supabase = await createClient();
   const { error } = await supabase.rpc("save_bank_details", {
@@ -165,7 +169,7 @@ export async function saveBankAction(fd: FormData): Promise<void> {
     p_account_name: text(fd, "account_name").slice(0, 120),
     p_note: text(fd, "note").slice(0, 300),
   });
-  if (error) go("bank", "error", errorCode(error));
+  if (error) return bad(errorCode(error));
 
   // Tell the owner, so a changed account number cannot go unnoticed. The new
   // number is deliberately not in the email. A failure here never blocks the save.
@@ -177,16 +181,16 @@ export async function saveBankAction(fd: FormData): Promise<void> {
       { template: "bank-details-changed", userId: session.user.id },
     );
   }
-  go("bank", "notice", "saved");
+  return done("bank");
 }
 
 // ------------------------------------------------------- booking switch
 
-export async function setBookingEnabledAction(fd: FormData): Promise<void> {
+export async function setBookingEnabledAction(fd: FormData): Promise<ActionResult> {
   await requireRole(["admin"]);
   const enable = text(fd, "enable") === "true";
   const supabase = await createClient();
   const { error } = await supabase.rpc("set_booking_enabled", { p_enabled: enable });
-  if (error) go("", "error", errorCode(error));
-  go("", "notice", enable ? "booking-on" : "booking-off");
+  if (error) return bad(errorCode(error));
+  return done("", enable ? "booking-on" : "booking-off");
 }

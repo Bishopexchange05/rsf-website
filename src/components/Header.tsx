@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { headerLink } from "@/content/accounts";
+import { headerAccountLink, headerAdminLink, headerLink } from "@/content/accounts";
 import { nav, site } from "@/content/site";
 import { Logo } from "./Logo";
 import { ThemeToggle } from "./ThemeToggle";
@@ -12,8 +12,13 @@ import { cn } from "@/lib/cn";
 // Login link only where accounts are switched on (never on the live site).
 const accountsOn = process.env.NEXT_PUBLIC_ACCOUNTS_ENABLED === "true";
 
+type Me = { signedIn: boolean; role: "member" | "staff" | "admin" | null };
+// Pages where someone may have just signed in or out.
+const ACCOUNT_AREA = /^\/(login|register|account|admin|two-factor|auth|verify-email|forgot-password|reset-password|book)/;
+
 export function Header() {
   const [scrolled, setScrolled] = useState(false);
+  const [me, setMe] = useState<Me | null>(null);
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
   const isActive = (href: string) =>
@@ -25,6 +30,43 @@ export function Header() {
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  // Who is signed in? Asked AFTER the page has loaded (never during server rendering),
+  // so public pages stay fast and static. The last answer is remembered for this tab.
+  useEffect(() => {
+    if (!accountsOn) return;
+    let cached: Me | null = null;
+    try {
+      const raw = sessionStorage.getItem("rsf:me");
+      if (raw) cached = JSON.parse(raw) as Me;
+    } catch {
+      // storage blocked: just ask the server
+    }
+    if (cached && !me) setMe(cached);
+    // Ask again on first load and on pages where signing in or out happens.
+    if (me && !ACCOUNT_AREA.test(pathname)) return;
+    let cancelled = false;
+    fetch("/api/me", { credentials: "same-origin", cache: "no-store" })
+      .then((r) => (r.ok ? (r.json() as Promise<Me>) : null))
+      .then((d) => {
+        if (cancelled || !d) return;
+        setMe(d);
+        try {
+          sessionStorage.setItem("rsf:me", JSON.stringify(d));
+        } catch {
+          // ignore
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
+
+  const signedIn = !!me?.signedIn;
+  const showAdmin = signedIn && (me?.role === "staff" || me?.role === "admin");
+  const accountLink = signedIn ? headerAccountLink : headerLink;
 
   // Lock page scroll and allow Escape to close while the mobile menu is open.
   useEffect(() => {
@@ -76,12 +118,20 @@ export function Header() {
               {item.label}
             </Link>
           ))}
+          {accountsOn && showAdmin && (
+            <Link
+              href={headerAdminLink.href}
+              className="inline-flex min-h-11 items-center rounded-full px-3 text-sm font-medium text-white/90 transition hover:bg-white/15 hover:text-white"
+            >
+              {headerAdminLink.label}
+            </Link>
+          )}
           {accountsOn && (
             <Link
-              href={headerLink.href}
+              href={accountLink.href}
               className="inline-flex min-h-11 items-center rounded-full border border-white/60 px-4 text-sm font-medium text-white transition hover:bg-white/15"
             >
-              {headerLink.label}
+              {accountLink.label}
             </Link>
           )}
           <ThemeToggle />
@@ -125,14 +175,25 @@ export function Header() {
                 </Link>
               </li>
             ))}
-            {accountsOn && (
+            {accountsOn && showAdmin && (
               <li className="border-b border-white/15">
                 <Link
-                  href={headerLink.href}
+                  href={headerAdminLink.href}
                   onClick={() => setOpen(false)}
                   className="flex min-h-14 items-center font-heading text-xl text-white"
                 >
-                  {headerLink.label}
+                  {headerAdminLink.label}
+                </Link>
+              </li>
+            )}
+            {accountsOn && (
+              <li className="border-b border-white/15">
+                <Link
+                  href={accountLink.href}
+                  onClick={() => setOpen(false)}
+                  className="flex min-h-14 items-center font-heading text-xl text-white"
+                >
+                  {accountLink.label}
                 </Link>
               </li>
             )}
