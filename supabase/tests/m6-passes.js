@@ -157,8 +157,8 @@ const hhmm = (iso) => new Intl.DateTimeFormat("en-GB", { timeZone: "Africa/Lagos
 
     // ---------- 9: confirm after the start date moves the start to today
     const rb = await row(b1.data);
-    const startsB = new Date(new Date(rb.starts_at).getTime() - 86400000).toISOString();
-    const endsB = new Date(new Date(rb.ends_at).getTime() - 86400000).toISOString();
+    const startsB = new Date(new Date(rb.starts_at).getTime() - 2 * 86400000).toISOString();
+    const endsB = new Date(new Date(rb.ends_at).getTime() - 2 * 86400000).toISOString();
     await admin.from("bookings").update({ starts_at: startsB, ends_at: endsB }).eq("id", b1.data);
     await B.client.rpc("claim_payment", { p_booking: b1.data, p_reference: null });
     const confB = await staff.client.rpc("staff_confirm_payment", { p_booking: b1.data });
@@ -182,7 +182,7 @@ const hhmm = (iso) => new Intl.DateTimeFormat("en-GB", { timeZone: "Africa/Lagos
     check("10b: keeping the original dates needs a reason", !!keepNoReason.error && /reason/i.test(keepNoReason.error.message), keepNoReason.error?.message);
     const keepAdmin = await adm.client.rpc("staff_confirm_payment", { p_booking: dPass.data, p_keep_dates: true, p_reason: "Customer was ill" });
     const rowD = await row(dPass.data);
-    check("10c: an Admin can keep the original dates with a reason", !keepAdmin.error && rowD.status === "confirmed" && rowD.starts_at === dStart, keepAdmin.error?.message);
+    check("10c: an Admin can keep the original dates with a reason", !keepAdmin.error && rowD.status === "confirmed" && new Date(rowD.starts_at).getTime() === new Date(dStart).getTime(), keepAdmin.error?.message);
 
     // ---------- 11: extend
     const extStaff = await staff.client.rpc("admin_extend_pass", { p_booking: dPass.data, p_days: 3, p_reason: "Closed for repairs" });
