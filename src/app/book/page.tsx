@@ -9,6 +9,7 @@ import { common } from "@/content/accounts";
 import { bookPage, errors as bookErrors } from "@/content/booking";
 import { requireUser } from "@/lib/auth";
 import { pass } from "@/content/monthly";
+import { overnight } from "@/content/overnight";
 import { createBookingAction, createPassAction } from "@/lib/booking-actions";
 import { addDays, dayLabel, isIsoDate, lagosDate, lagosHHMM, timeLabel } from "@/lib/lagos";
 import { noIndex } from "@/lib/no-index";
@@ -27,6 +28,7 @@ type Config = {
   half_day_split: string;
   monthly_pass_days: number;
   monthly_start_window_days: number;
+  overnight?: { enabled: boolean };
   prices: Partial<Record<"hour" | "half_day" | "day" | "month", { standard: number; student: number | null }>>;
 };
 type Availability = { available: boolean; reason: string | null; next_start: string | null };
@@ -195,6 +197,19 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ d
             )}
           </Card>
         </div>
+      )}
+
+      {/* ---- overnight desk (only when it is open for requests) ---- */}
+      {config.overnight?.enabled && (
+        <Card className="mt-6">
+          <h2 className="text-h3">{overnight.cardOnBook.heading}</h2>
+          <p className="mt-2">{overnight.cardOnBook.text}</p>
+          <p className="mt-4">
+            <Link href={overnight.cardOnBook.href} className={bookButton}>
+              {overnight.cardOnBook.link}
+            </Link>
+          </p>
+        </Card>
       )}
 
       {/* ---- monthly pass ---- */}

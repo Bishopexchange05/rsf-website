@@ -4,6 +4,7 @@ import { PageHero } from "@/components/PageHero";
 import { Section } from "@/components/Section";
 import { admin } from "@/content/accounts";
 import { media } from "@/content/events";
+import { requestsAdmin } from "@/content/overnight";
 import { staffNav } from "@/content/payments";
 
 const pill =
@@ -38,6 +39,9 @@ export function AdminShell({
           </Link>
           <Link href={staffNav.passes.href} className={pill}>
             {staffNav.passes.label}
+          </Link>
+          <Link href={requestsAdmin.nav.href} className={pill}>
+            {requestsAdmin.nav.label}
           </Link>
           {isAdmin &&
             admin.links.map((l) => (

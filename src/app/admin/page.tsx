@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { Card } from "@/components/Card";
 import { account, admin } from "@/content/accounts";
+import { requestsAdmin } from "@/content/overnight";
 import { staffNav } from "@/content/payments";
 import { requireRole } from "@/lib/auth";
 import { noIndex } from "@/lib/no-index";
@@ -21,7 +22,7 @@ export default async function Page() {
   const isAdmin = profile.role === "admin";
 
   const supabase = await createClient();
-  const [{ count: toCheck }, { count: refunds }, { count: endingSoon }] = await Promise.all([
+  const [{ count: toCheck }, { count: refunds }, { count: endingSoon }, { count: requests }] = await Promise.all([
     supabase.from("bookings").select("id", { count: "exact", head: true }).eq("status", "payment_claimed"),
     supabase.from("bookings").select("id", { count: "exact", head: true }).eq("refund_owed", true).is("refund_done_at", null),
     supabase
@@ -31,11 +32,18 @@ export default async function Page() {
       .eq("status", "confirmed")
       .gt("ends_at", new Date().toISOString())
       .lte("ends_at", new Date(Date.now() + 5 * 24 * 3600 * 1000).toISOString()),
+    supabase
+      .from("bookings")
+      .select("id", { count: "exact", head: true })
+      .eq("kind", "night")
+      .eq("status", "pending_approval")
+      .gt("hold_expires_at", new Date().toISOString()),
   ]);
 
   const cards = [
     { ...staffNav.payments, badge: toCheck ? `${toCheck} to check` : null },
     { ...staffNav.bookings, badge: refunds ? `${refunds} refund${refunds === 1 ? "" : "s"} owed` : null, href: refunds ? "/admin/bookings?view=refunds" : staffNav.bookings.href },
+    { ...requestsAdmin.nav, badge: requests ? `${requests} waiting` : null },
     { ...staffNav.passes, badge: endingSoon ? `${endingSoon} ending soon` : null },
     ...(isAdmin ? admin.links.map((l) => ({ ...l, badge: null as string | null })) : []),
   ];

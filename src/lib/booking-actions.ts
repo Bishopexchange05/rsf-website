@@ -12,6 +12,9 @@ import { getSiteOrigin } from "@/lib/site-origin";
 import { createClient } from "@/lib/supabase/server";
 import { bookingPage } from "@/content/booking";
 import { passEmailNote } from "@/content/monthly";
+import { overnightEmails } from "@/content/overnight";
+import { site } from "@/content/site";
+import { officeHoursText, type OpeningDay } from "@/lib/office-hours";
 
 // Member booking actions. Everything is checked again inside the database
 // function, which is the part that counts. Results come back as short codes in
@@ -35,6 +38,9 @@ function errorCode(error: { code?: string; message?: string }): string {
   if (m.includes("no longer available")) return "unavailable";
   if (m.includes("unpaid bookings")) return "too-many-unpaid";
   if (m.includes("contact us for pricing")) return "price-not-set";
+  if (m.includes("18 or over")) return "under-age";
+  if (m.includes("nights at a time")) return "too-many-nights";
+  if (m.includes("waiting for approval")) return "request-waiting";
   if (m.includes("during those dates")) return "pass-overlap";
   if (m.includes("fully booked")) return "pass-full";
   if (m.includes("not all free")) return "pass-hours";
@@ -51,7 +57,7 @@ function errorCode(error: { code?: string; message?: string }): string {
 // A booking problem is shown in place, under the form. If the desks changed under the
 // person (someone else booked first), the page is refreshed so the counts are right.
 function problem(error: string): ActionResult {
-  if (["unavailable", "overlap", "too-many-unpaid", "pass-full", "pass-hours", "pass-overlap"].includes(error)) revalidatePath("/book");
+  if (["unavailable", "overlap", "too-many-unpaid", "pass-full", "pass-hours", "pass-overlap", "request-waiting"].includes(error)) revalidatePath("/book");
   return { error };
 }
 
@@ -176,4 +182,62 @@ export async function renewPassAction(fd: FormData): Promise<ActionResult> {
   if (error || typeof data !== "string") return problem(error ? errorCode(error) : "failed");
   await sendCreatedEmail(session, data);
   redirect(`/account/bookings/${data}?notice=renewed`);
+}
+
+// Request some overnight nights. The 18+ tick is stored with the time. There is no upload
+// of any kind: ID is checked in person at the office.
+export async function requestOvernightAction(fd: FormData): Promise<ActionResult> {
+  const session = await requireUser();
+  const checkin = text(fd, "checkin");
+  const nights = parseIntIn(text(fd, "nights"), 1, 60);
+  if (!isIsoDate(checkin) || nights === null) return problem("invalid");
+  if (await limited(`night:${session.user.id}`, 10, HOUR)) return problem("too-many");
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("create_night_request", {
+    p_checkin: checkin,
+    p_nights: nights,
+    p_age_confirmed: text(fd, "age") === "on",
+  });
+  if (error || typeof data !== "string") return problem(error ? errorCode(error) : "failed");
+  const id = data as string;
+
+  // Tell the member how to come and meet us, and tell the team. A failed email never stops the request.
+  const { data: b } = await supabase
+    .from("bookings")
+    .select("reference, kind, starts_at, ends_at, hold_expires_at")
+    .eq("id", id)
+    .maybeSingle();
+  if (b) {
+    const origin = await getSiteOrigin();
+    const { data: pub } = await supabase.rpc("get_public_settings");
+    const hours = officeHoursText((pub as { hours?: OpeningDay[] } | null)?.hours);
+    const when = bookingWhen(b);
+    if (session.user.email) {
+      await sendLoggedEmail(
+        {
+          to: session.user.email,
+          subject: overnightEmails.requested.subject(b.reference),
+          text: overnightEmails.requested.body(
+            session.profile.full_name,
+            b.reference,
+            when,
+            b.hold_expires_at ? dateTimeLabel(b.hold_expires_at) : "",
+            site.whatsapp,
+            hours || "Please message us on WhatsApp to arrange a time.",
+            `${origin}/account/bookings/${id}`,
+          ),
+        },
+        { template: "overnight-requested", userId: session.user.id },
+      );
+    }
+    const staffInbox = (process.env.FORMS_TO_EMAIL ?? "").trim().replace(/^"|"$/g, "");
+    if (staffInbox) {
+      await sendLoggedEmail(
+        { to: staffInbox, subject: overnightEmails.staffNotice.subject(b.reference), text: overnightEmails.staffNotice.body(b.reference, when, `${origin}/admin/overnight`) },
+        { template: "overnight-staff-notice", userId: session.user.id },
+      );
+    }
+  }
+  redirect(`/account/bookings/${id}?notice=requested`);
 }

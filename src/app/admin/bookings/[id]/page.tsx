@@ -9,6 +9,8 @@ import { Card } from "@/components/Card";
 import { PendingButton } from "@/components/PendingButton";
 import { myBookings } from "@/content/booking";
 import { passAdminDetail } from "@/content/monthly";
+import { requestsAdmin } from "@/content/overnight";
+import { RequestDecision } from "@/components/admin/RequestDecision";
 import { actionErrors, actionNotices, bookingDetail, whatsappMessage } from "@/content/payments";
 import { requireRole } from "@/lib/auth";
 import { bookingWhen, dateTimeLabel, passLateStart } from "@/lib/lagos";
@@ -39,6 +41,8 @@ type Booking = {
   refund_note: string | null;
   extended_days: number;
   refund_amount_kobo: number | null;
+  age_confirmed_at: string | null;
+  approved_at: string | null;
   profiles: One<{ full_name: string; phone: string }>;
   payments: One<{
     customer_reference: string | null;
@@ -69,7 +73,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
   const { data } = await supabase
     .from("bookings")
     .select(
-      "id, reference, kind, starts_at, ends_at, status, amount_kobo, is_student_price, hold_expires_at, cancel_reason, refund_owed, refund_done_at, refund_note, extended_days, refund_amount_kobo, profiles(full_name, phone), payments(customer_reference, claimed_at, status, confirmed_at, received_kobo, rejected_reason)",
+      "id, reference, kind, starts_at, ends_at, status, amount_kobo, is_student_price, hold_expires_at, cancel_reason, refund_owed, refund_done_at, refund_note, extended_days, refund_amount_kobo, age_confirmed_at, approved_at, profiles(full_name, phone), payments(customer_reference, claimed_at, status, confirmed_at, received_kobo, rejected_reason)",
     )
     .eq("id", id)
     .maybeSingle();
@@ -132,6 +136,16 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
           </div>
         </dl>
         {b.is_student_price && <p className="mt-3 rounded-xl bg-amber/30 p-2 text-sm font-medium">{bookingDetail.studentPrice}</p>}
+        {b.age_confirmed_at && (
+          <p className="mt-3 text-sm">
+            {requestsAdmin.detail.age}: {dateTimeLabel(b.age_confirmed_at)}
+          </p>
+        )}
+        {b.approved_at && (
+          <p className="text-sm">
+            {requestsAdmin.detail.approvedAt}: {dateTimeLabel(b.approved_at)}
+          </p>
+        )}
         {b.extended_days > 0 && <p className="mt-3 text-sm font-medium">{passAdminDetail.extendedBy(b.extended_days)}</p>}
         {whatsapp && (
           <p className="mt-4">
@@ -179,6 +193,8 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
       <Card className="mt-6">
         <h2 className="text-h3">{bookingDetail.actions}</h2>
         <div className="mt-4 space-y-6">
+          {b.kind === "night" && status === "pending_approval" && !lapsed && <RequestDecision bookingId={b.id} />}
+
           {status === "payment_claimed" && <PaymentDecision bookingId={b.id} expectedKobo={b.amount_kobo} late={passLateStart(b)} isAdmin={isAdmin} />}
 
           {status === "confirmed" && started && !isPass && (
@@ -190,7 +206,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
             </ActionForm>
           )}
 
-          {status === "expired" && !ended && (
+          {status === "expired" && !ended && (b.kind !== "night" || b.approved_at) && (
             <ActionForm action={reopenBookingAction} notices={actionNotices} errors={actionErrors} toast lockOnSuccess className="space-y-2">
               <input type="hidden" name="booking" value={b.id} />
               <p className="text-sm opacity-85">{bookingDetail.reopenHelp}</p>

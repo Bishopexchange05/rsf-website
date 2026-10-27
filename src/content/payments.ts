@@ -2,6 +2,7 @@
 // staff Payments queue and Bookings pages, and the emails. No copy in components.
 
 import { passAdminDetail } from "@/content/monthly";
+import { requestsAdmin } from "@/content/overnight";
 
 // ---------------------------------------------------------------- customer
 
@@ -97,6 +98,7 @@ export const bookingsAdmin = {
     { value: "confirmed", label: "Confirmed" },
     { value: "expired", label: "Expired" },
     { value: "passes", label: "Monthly passes" },
+    { value: "requests", label: "Overnight requests" },
     { value: "refunds", label: "Refunds owed" },
   ],
   empty: "No bookings match.",
@@ -204,5 +206,5 @@ export const emails = {
 };
 
 // Messages for every staff action form (the queue and the booking page share them).
-export const actionNotices: Record<string, string> = { ...queue.notices, ...bookingDetail.notices, ...passAdminDetail.notices };
-export const actionErrors: Record<string, string> = { ...queue.errors, ...bookingDetail.errors, ...passAdminDetail.errors };
+export const actionNotices: Record<string, string> = { ...queue.notices, ...bookingDetail.notices, ...passAdminDetail.notices, ...requestsAdmin.notices };
+export const actionErrors: Record<string, string> = { ...queue.errors, ...bookingDetail.errors, ...passAdminDetail.errors, ...requestsAdmin.errors };

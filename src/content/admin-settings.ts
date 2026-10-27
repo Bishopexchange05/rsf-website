@@ -124,6 +124,7 @@ export const rulesPage = {
     { name: "monthly_start_window_days", label: "Monthly pass can start up to this many days ahead", help: "0 to 90.", min: 0, max: 90 },
     { name: "monthly_self_cancel_cutoff_hours", label: "Cancel a monthly pass until this many hours before its start", help: "0 to 720.", min: 0, max: 720 },
     { name: "overnight_max_nights", label: "Longest single overnight booking (nights)", help: "1 to 60.", min: 1, max: 60 },
+    { name: "overnight_request_expiry_days", label: "Overnight requests wait this many days for the team", help: "If nobody answers in this time, the request expires and its desks are released. 1 to 30.", min: 1, max: 30 },
   ],
   monthlyHeading: "Monthly pass",
   monthlyExplain: (days: number, maxDesks: number) =>

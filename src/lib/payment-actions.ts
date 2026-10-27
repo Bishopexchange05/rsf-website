@@ -4,13 +4,14 @@ import { revalidatePath } from "next/cache";
 import type { ActionResult } from "@/lib/action-result";
 import { requireRole, requireUser } from "@/lib/auth";
 import { sendLoggedEmail } from "@/lib/email/log";
-import { bookingWhen } from "@/lib/lagos";
+import { bookingWhen, timeLabel } from "@/lib/lagos";
 import { limited } from "@/lib/rate-limit-db";
 import { formatNaira, nairaToKobo } from "@/lib/settings-validation";
 import { getSiteOrigin } from "@/lib/site-origin";
 import { adminConfigured, createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { passEmailNote } from "@/content/monthly";
+import { overnightEmails } from "@/content/overnight";
 import { emails } from "@/content/payments";
 
 // The bank-transfer actions. Customers say "I've paid"; Staff and Admin confirm or
@@ -39,12 +40,13 @@ function memberError(error: DbError): string {
 function staffError(error: DbError): string {
   if (error.code === "42501") return "forbidden";
   const m = (error.message ?? "").toLowerCase();
-  if (m.includes("only a booking") || m.includes("only a confirmed") || m.includes("only an expired") || m.includes("cannot be cancelled") || m.includes("no refund is owed")) return "wrong-state";
+  if (m.includes("only a request") || m.includes("cannot be re-opened") || m.includes("only a booking") || m.includes("only a confirmed") || m.includes("only an expired") || m.includes("cannot be cancelled") || m.includes("no refund is owed")) return "wrong-state";
   if (m.includes("give a reason")) return "reason";
   if (m.includes("no longer available")) return "unavailable";
   if (m.includes("already passed")) return "passed";
   if (m.includes("not started")) return "not-started";
   if (m.includes("amount received") || m.includes("refund amount")) return "amount";
+  if (m.includes("request has expired")) return "request-expired";
   if (m.includes("moved dates")) return "shift-blocked";
   if (m.includes("pass has started")) return "pass-started";
   if (m.includes("number of days")) return "days";
@@ -175,12 +177,29 @@ export async function confirmPaymentAction(fd: FormData): Promise<ActionResult> 
   if (b) {
     const c = await customerFor(b.user_id);
     const origin = await getSiteOrigin();
+    // An overnight booking's address and house rules are added ONLY here, after the
+    // payment is confirmed, and only to the booking's owner.
+    let overnightNote = "";
+    if (b.kind === "night" && adminConfigured()) {
+      try {
+        const { data: st } = await createAdminClient()
+          .from("settings")
+          .select("overnight_location_private, overnight_rules_text, overnight_checkin, overnight_checkout")
+          .maybeSingle();
+        if (st) {
+          const at = (t: unknown) => timeLabel("2000-01-01T" + String(t ?? "00:00").slice(0, 5) + ":00+01:00");
+          overnightNote = overnightEmails.confirmedDetails(st.overnight_location_private ?? "", st.overnight_rules_text ?? "", at(st.overnight_checkin), at(st.overnight_checkout));
+        }
+      } catch {
+        overnightNote = "";
+      }
+    }
     if (c.email) {
       await sendLoggedEmail(
         {
           to: c.email,
           subject: emails.confirmed.subject(b.reference),
-          text: emails.confirmed.body(c.name, b.reference, whenLabel(b), formatNaira(received ?? b.amount_kobo), `${origin}/account/bookings/${id}`, b.is_student_price, b.kind === "month" ? passEmailNote(Math.round((new Date(b.ends_at).getTime() - new Date(b.starts_at).getTime()) / (24 * HOUR))) : ""),
+          text: emails.confirmed.body(c.name, b.reference, whenLabel(b), formatNaira(received ?? b.amount_kobo), `${origin}/account/bookings/${id}`, b.is_student_price, b.kind === "month" ? passEmailNote(Math.round((new Date(b.ends_at).getTime() - new Date(b.starts_at).getTime()) / (24 * HOUR))) : overnightNote),
         },
         { template: "payment-confirmed", userId: b.user_id ?? undefined },
       );
@@ -325,4 +344,60 @@ export async function cancelPassAction(fd: FormData): Promise<ActionResult> {
   refresh(id);
   revalidatePath("/admin/passes");
   return { notice: "pass-cancelled" };
+}
+
+// ------------------------------------------------ overnight requests
+
+export async function approveRequestAction(fd: FormData): Promise<ActionResult> {
+  const session = await requireRole(["admin", "staff"]);
+  const id = text(fd, "booking");
+  if (!UUID.test(id)) return { error: "failed" };
+  if (await limited(`approve:${session.user.id}`, 60, HOUR)) return { error: "too-many" };
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("staff_approve_request", { p_booking: id });
+  if (error) return { error: staffError(error) };
+
+  const b = await loadBooking(id);
+  if (b) {
+    const c = await customerFor(b.user_id);
+    const origin = await getSiteOrigin();
+    if (c.email) {
+      await sendLoggedEmail(
+        { to: c.email, subject: overnightEmails.approved.subject(b.reference), text: overnightEmails.approved.body(c.name, b.reference, whenLabel(b), formatNaira(b.amount_kobo), `${origin}/account/bookings/${id}`) },
+        { template: "overnight-approved", userId: b.user_id ?? undefined },
+      );
+    }
+  }
+  refresh(id);
+  revalidatePath("/admin/overnight");
+  return { notice: "approved" };
+}
+
+export async function rejectRequestAction(fd: FormData): Promise<ActionResult> {
+  const session = await requireRole(["admin", "staff"]);
+  const id = text(fd, "booking");
+  const reason = text(fd, "reason").trim();
+  if (!UUID.test(id)) return { error: "failed" };
+  if (reason.length < 3 || reason.length > 300) return { error: "reason" };
+  if (await limited(`approve:${session.user.id}`, 60, HOUR)) return { error: "too-many" };
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("staff_reject_request", { p_booking: id, p_reason: reason });
+  if (error) return { error: staffError(error) };
+
+  const b = await loadBooking(id);
+  if (b) {
+    const c = await customerFor(b.user_id);
+    const origin = await getSiteOrigin();
+    if (c.email) {
+      await sendLoggedEmail(
+        { to: c.email, subject: overnightEmails.rejected.subject(b.reference), text: overnightEmails.rejected.body(c.name, b.reference, reason, `${origin}/contact`) },
+        { template: "overnight-rejected", userId: b.user_id ?? undefined },
+      );
+    }
+  }
+  refresh(id);
+  revalidatePath("/admin/overnight");
+  return { notice: "request-rejected" };
 }

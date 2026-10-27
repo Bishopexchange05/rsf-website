@@ -53,7 +53,15 @@ export function passRange(startsIso: string, endsIso: string): string {
 }
 
 // How a booking's time is written: a pass by its dates, everything else by day and hours.
+export function nightsOf(startsIso: string, endsIso: string): number {
+  return Math.round((new Date(lagosDate(new Date(endsIso)) + "T12:00:00Z").getTime() - new Date(lagosDate(new Date(startsIso)) + "T12:00:00Z").getTime()) / 86400000);
+}
+
 export function bookingWhen(b: { kind: string; starts_at: string; ends_at: string }): string {
+  if (b.kind === "night") {
+    const n = nightsOf(b.starts_at, b.ends_at);
+    return `${dayLabel(b.starts_at)}, check-in ${timeLabel(b.starts_at)}, to ${dayLabel(b.ends_at)}, check-out ${timeLabel(b.ends_at)} (${n} night${n === 1 ? "" : "s"})`;
+  }
   return b.kind === "month"
     ? passRange(b.starts_at, b.ends_at)
     : `${dayLabel(b.starts_at)}, ${timeLabel(b.starts_at)} to ${timeLabel(b.ends_at)}`;

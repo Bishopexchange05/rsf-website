@@ -9,10 +9,12 @@ import { PendingButton } from "@/components/PendingButton";
 import { common } from "@/content/accounts";
 import { bookingPage, errors as bookingErrors, myBookings, notices as bookingNotices } from "@/content/booking";
 import { passBooking } from "@/content/monthly";
+import { overnightBooking } from "@/content/overnight";
 import { claim } from "@/content/payments";
+import { site } from "@/content/site";
 import { requireUser } from "@/lib/auth";
 import { cancelBookingAction, renewPassAction } from "@/lib/booking-actions";
-import { bookingWhen, lagosDate } from "@/lib/lagos";
+import { bookingWhen, dateTimeLabel, lagosDate, timeLabel } from "@/lib/lagos";
 import { noIndex } from "@/lib/no-index";
 import { claimPaymentAction } from "@/lib/payment-actions";
 import { formatNaira } from "@/lib/settings-validation";
@@ -35,7 +37,10 @@ type Booking = {
   refund_done_at: string | null;
   extended_days: number;
   refund_amount_kobo: number | null;
+  cancel_reason: string | null;
+  approved_at: string | null;
 };
+type Details = { location: string | null; rules: string | null; checkin: string | null; checkout: string | null };
 type Pay = { reference: string; amount_kobo: number; hold_expires_at: string; bank_name: string | null; account_number: string | null; account_name: string | null; note: string | null };
 type PaymentRow = { customer_reference: string | null; rejected_reason: string | null; status: string };
 
@@ -55,7 +60,7 @@ export default async function Page({
   const supabase = await createClient();
   const { data } = await supabase
     .from("bookings")
-    .select("id, reference, kind, starts_at, ends_at, status, amount_kobo, is_student_price, hold_expires_at, refund_owed, refund_done_at, extended_days, refund_amount_kobo")
+    .select("id, reference, kind, starts_at, ends_at, status, amount_kobo, is_student_price, hold_expires_at, refund_owed, refund_done_at, extended_days, refund_amount_kobo, cancel_reason, approved_at")
     .eq("id", id)
     .eq("user_id", user.id)
     .maybeSingle();
@@ -76,7 +81,18 @@ export default async function Page({
     const { data: p } = await supabase.from("payments").select("customer_reference, rejected_reason, status").eq("booking_id", id).maybeSingle();
     payment = (p as PaymentRow | null) ?? null;
   }
-  const canCancel = status === "pending_payment" || status === "confirmed";
+  const canCancel = status === "pending_payment" || status === "pending_approval" || status === "confirmed";
+  const isNight = b.kind === "night";
+  const neverApproved = isNight && !b.approved_at;
+
+  // The address and house rules: the database returns them only to the owner of a CONFIRMED
+  // overnight booking. For anyone else, or any other state, this stays empty.
+  let details: Details | null = null;
+  if (isNight && status === "confirmed") {
+    const { data: d } = await supabase.rpc("get_overnight_details", { p_booking: id });
+    details = ((d as Details[] | null) ?? [])[0] ?? null;
+  }
+  const at = (t: string | null) => (t ? timeLabel("2000-01-01T" + t.slice(0, 5) + ":00+01:00") : "");
 
   const isPass = b.kind === "month";
   let cutoffHours: number | null = null;
@@ -183,6 +199,44 @@ export default async function Page({
         </Card>
       )}
 
+      {isNight && status === "pending_approval" && (
+        <Card className="mt-6">
+          <h2 className="text-h3">{overnightBooking.waiting.heading}</h2>
+          <p className="mt-2">{overnightBooking.waiting.text}</p>
+          {b.hold_expires_at && (
+            <p className="mt-3 text-sm">
+              <span className="font-semibold">{overnightBooking.waiting.heldUntil}:</span> {dateTimeLabel(b.hold_expires_at)}
+            </p>
+          )}
+          <p className="mt-3">
+            <a href={site.whatsapp} target="_blank" rel="noopener noreferrer" className={bookOutline}>
+              {overnightBooking.waiting.contact}
+            </a>
+          </p>
+        </Card>
+      )}
+
+      {isNight && status === "pending_payment" && b.approved_at && <p className="mt-6 font-semibold">{overnightBooking.approvedNote}</p>}
+
+      {details && (
+        <Card className="mt-6">
+          <h2 className="text-h3">{overnightBooking.details.heading}</h2>
+          <p className="mt-2">{overnightBooking.details.intro}</p>
+          {details.location && (
+            <p className="mt-3 whitespace-pre-line">
+              <span className="font-semibold">{overnightBooking.details.location}:</span> {details.location}
+            </p>
+          )}
+          {details.rules && (
+            <div className="mt-3">
+              <p className="font-semibold">{overnightBooking.details.rules}</p>
+              <p className="whitespace-pre-line">{details.rules}</p>
+            </div>
+          )}
+          <p className="mt-3 text-sm">{overnightBooking.details.times(at(details.checkin), at(details.checkout))}</p>
+        </Card>
+      )}
+
       {status === "payment_claimed" && (
         <Card className="mt-6">
           <h2 className="text-h3">{claim.claimedHeading}</h2>
@@ -203,7 +257,24 @@ export default async function Page({
         </Card>
       )}
 
-      {status === "rejected" && (
+      {status === "rejected" && neverApproved && (
+        <Card className="mt-6">
+          <h2 className="text-h3">{overnightBooking.rejected.heading}</h2>
+          {b.cancel_reason && (
+            <p className="mt-2">
+              <span className="font-semibold">{overnightBooking.rejected.reason}:</span> {b.cancel_reason}
+            </p>
+          )}
+          <p className="mt-2">{overnightBooking.rejected.text}</p>
+          <p className="mt-3">
+            <Link href={claim.contactHref} className={bookOutline}>
+              {claim.contactLine}
+            </Link>
+          </p>
+        </Card>
+      )}
+
+      {status === "rejected" && !neverApproved && (
         <Card className="mt-6">
           <h2 className="text-h3">{claim.rejectedHeading}</h2>
           {payment?.rejected_reason && (
@@ -238,7 +309,7 @@ export default async function Page({
         </Card>
       )}
 
-      {status === "expired" && <p className="mt-6">{bookingPage.pay.expired}</p>}
+      {status === "expired" && <p className="mt-6">{neverApproved ? overnightBooking.expired : bookingPage.pay.expired}</p>}
 
       {isPass && renewOpen && (
         <Card className="mt-6">

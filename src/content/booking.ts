@@ -97,7 +97,7 @@ export const myBookings = {
     pending_approval: "Waiting for approval",
     approved: "Approved",
   } as Record<string, string>,
-  kinds: { hour: "By the hour", half_day: "Half day", day: "Full day", month: "Monthly pass" } as Record<string, string>,
+  kinds: { hour: "By the hour", half_day: "Half day", day: "Full day", month: "Monthly pass", night: "Overnight" } as Record<string, string>,
 };
 
 export const bookingPage = {

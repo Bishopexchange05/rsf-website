@@ -54,6 +54,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ q
 
   if (VIEW_STATUS[view]) query = query.eq("status", VIEW_STATUS[view]);
   if (view === "passes") query = query.eq("kind", "month");
+  if (view === "requests") query = query.eq("kind", "night").eq("status", "pending_approval");
   if (view === "refunds") query = query.eq("refund_owed", true).is("refund_done_at", null);
   if (isIsoDate(day)) {
     query = query.gte("starts_at", `${day}T00:00:00+01:00`).lt("starts_at", `${addDays(day, 1)}T00:00:00+01:00`);
