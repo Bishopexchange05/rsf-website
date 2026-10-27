@@ -84,14 +84,26 @@ export const workspace = {
       title: "Day workspace",
       text: "Open to students, freelancers and young professionals. Send a request with the day you'd like to come, and we'll confirm.",
       cta: "Request day space",
+      // When booking is open on the site: choose a day and pay by bank transfer.
+      booking: {
+        text: "Open to students, freelancers and young professionals. Choose the day and hours you need, then pay by bank transfer. We hold your desk while you pay.",
+        cta: "Book a day desk",
+        href: "/book",
+      },
       image: media.day,
     },
     {
       form: "overnight-access",
       title: "Overnight workspace",
-      text: "For people who need to work or study through the night. Overnight access is approved in person. Send a request, and we'll invite you to our office to meet the team and complete a short verification. Bring valid ID to that visit. Once approved, we'll share the overnight location and how access works.",
+      text: "For people who need to work or study through the night. Overnight access is approved in person. Send a request, and we'll invite you to our office to meet the team and complete a short verification. Bring valid ID to that visit. Once your booking is confirmed, we'll share the overnight location and how access works.",
       note: "We never collect ID documents through this website.",
       cta: "Request overnight access",
+      // When overnight requests are open on the site: an account request, then payment.
+      booking: {
+        text: "For people aged 18 or over who need to work or study through the night. Send a request, and we'll invite you to our office to meet the team. We check your ID there, in person, and approve your request. Then you pay by bank transfer. Once your booking is confirmed, we'll share the overnight location and how access works.",
+        cta: "Request an overnight desk",
+        href: "/book/overnight",
+      },
       image: media.overnight,
     },
   ],

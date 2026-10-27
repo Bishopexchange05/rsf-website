@@ -122,8 +122,9 @@ hardcode a dark-mode color inline; reference the token.
 - No Leadership/Team page, no standalone "Why Abakaliki" section, no Profile/Documents
 - There are NO prices anywhere on the site until real fees are confirmed. Course
   cards say fees will be shared soon and offer "Register interest" instead
-- The overnight workspace location/address is never shown on the site. It is
-  shared in person after approval
+- The overnight workspace address and house rules are never shown on the public site. They
+  are shown only to a member whose overnight booking is payment-confirmed (on their own
+  booking page and in their confirmation email), and never to anyone else
 - The address is defined once in `/content/site.ts` (short and long versions);
   use those constants, never retype it
 - Impact stats, testimonials and stories are placeholders until real data arrives

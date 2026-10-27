@@ -148,8 +148,8 @@ export const overnightEmails = {
   },
   approved: {
     subject: (ref: string) => `Your overnight request is approved: ${ref}`,
-    body: (name: string, ref: string, when: string, amount: string, url: string) =>
-      `Hello ${name},\n\nThank you for visiting us. Your overnight request is approved.\n\nReference: ${ref}\nStay: ${when}\nAmount: ${amount}\n\nThe next step is to pay by bank transfer. The bank details and a timer are on your booking page:\n${url}\n\nUse the reference as the transfer description. Once your payment is confirmed, we will show you the address and house rules.\n\nRafael Support Foundation`,
+    body: (name: string, ref: string, when: string, amount: string, until: string, url: string) =>
+      `Hello ${name},\n\nThank you for visiting us. Your overnight request is approved.\n\nReference: ${ref}\nStay: ${when}\nAmount: ${amount}\n\nThe next step is to pay by bank transfer before ${until}. The bank details and a timer are on your booking page:\n${url}\n\nUse the reference as the transfer description. Once your payment is confirmed, we will show you the address and house rules.\n\nRafael Support Foundation`,
   },
   rejected: {
     subject: (ref: string) => `We could not approve your overnight request: ${ref}`,

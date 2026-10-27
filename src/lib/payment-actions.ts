@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import type { ActionResult } from "@/lib/action-result";
 import { requireRole, requireUser } from "@/lib/auth";
 import { sendLoggedEmail } from "@/lib/email/log";
-import { bookingWhen, timeLabel } from "@/lib/lagos";
+import { bookingWhen, dateTimeLabel, timeLabel } from "@/lib/lagos";
 import { limited } from "@/lib/rate-limit-db";
 import { formatNaira, nairaToKobo } from "@/lib/settings-validation";
 import { getSiteOrigin } from "@/lib/site-origin";
@@ -76,6 +76,7 @@ type BookingRow = {
   starts_at: string;
   ends_at: string;
   amount_kobo: number;
+  hold_expires_at: string | null;
   is_student_price: boolean;
   status: string;
   cancel_reason: string | null;
@@ -86,7 +87,7 @@ async function loadBooking(id: string): Promise<BookingRow | null> {
   const supabase = await createClient();
   const { data } = await supabase
     .from("bookings")
-    .select("id, reference, kind, user_id, starts_at, ends_at, amount_kobo, is_student_price, status, cancel_reason, refund_owed")
+    .select("id, reference, kind, user_id, starts_at, ends_at, amount_kobo, hold_expires_at, is_student_price, status, cancel_reason, refund_owed")
     .eq("id", id)
     .maybeSingle();
   return (data as BookingRow | null) ?? null;
@@ -364,7 +365,7 @@ export async function approveRequestAction(fd: FormData): Promise<ActionResult> 
     const origin = await getSiteOrigin();
     if (c.email) {
       await sendLoggedEmail(
-        { to: c.email, subject: overnightEmails.approved.subject(b.reference), text: overnightEmails.approved.body(c.name, b.reference, whenLabel(b), formatNaira(b.amount_kobo), `${origin}/account/bookings/${id}`) },
+        { to: c.email, subject: overnightEmails.approved.subject(b.reference), text: overnightEmails.approved.body(c.name, b.reference, whenLabel(b), formatNaira(b.amount_kobo), b.hold_expires_at ? dateTimeLabel(b.hold_expires_at) : "the time shown on your booking page", `${origin}/account/bookings/${id}`) },
         { template: "overnight-approved", userId: b.user_id ?? undefined },
       );
     }

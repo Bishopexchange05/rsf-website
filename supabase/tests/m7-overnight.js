@@ -87,7 +87,7 @@ function walk(dir, out = []) {
   const made = [];
   const saved = {};
   try {
-    saved.settings = (await admin.from("settings").select("booking_enabled, max_unpaid_bookings, overnight_max_nights, overnight_request_expiry_days, overnight_checkin, overnight_checkout, overnight_location_private, overnight_rules_text, hold_minutes").single()).data;
+    saved.settings = (await admin.from("settings").select("booking_enabled, max_unpaid_bookings, overnight_max_nights, overnight_request_expiry_days, overnight_checkin, overnight_checkout, overnight_location_private, overnight_rules_text, hold_minutes, overnight_pay_hours").single()).data;
     saved.on = (await admin.from("spaces").select("capacity, is_bookable").eq("slug", "overnight").single()).data;
     const { data: sp } = await admin.from("spaces").select("id").eq("slug", "overnight").single();
     saved.spaceId = sp.id;
@@ -96,7 +96,7 @@ function walk(dir, out = []) {
     await admin.from("spaces").update({ capacity: 2, is_bookable: true }).eq("slug", "overnight");
     await admin.from("settings").update({
       booking_enabled: true, max_unpaid_bookings: 10, overnight_max_nights: 3, overnight_request_expiry_days: 3,
-      overnight_checkin: "20:00", overnight_checkout: "07:00", overnight_location_private: SECRET_LOC, overnight_rules_text: SECRET_RULES, hold_minutes: 120,
+      overnight_checkin: "20:00", overnight_checkout: "07:00", overnight_location_private: SECRET_LOC, overnight_rules_text: SECRET_RULES, hold_minutes: 120, overnight_pay_hours: 24,
     }).eq("id", true);
     const setPrice = (amount) => admin.from("prices").update({ amount_kobo: amount }).eq("space_id", sp.id).eq("kind", "night").eq("audience", "standard");
     await setPrice(null);
@@ -189,6 +189,8 @@ function walk(dir, out = []) {
     const appr = await staff.client.rpc("staff_approve_request", { p_booking: a1.data });
     const rowA2 = await row(a1.data);
     check("5g: Staff (two-step) can approve; the booking moves to pending_payment with a hold", !appr.error && rowA2.status === "pending_payment" && !!rowA2.approved_at && new Date(rowA2.hold_expires_at).getTime() > Date.now(), appr.error?.message);
+    const payHours = (new Date(rowA2.hold_expires_at).getTime() - Date.now()) / 3600000;
+    check("5g2: an approved request gets the overnight pay window (24 hours), not the 2-hour hold", payHours > 23.5 && payHours <= 24.01, payHours.toFixed(2) + " hours");
     const apprAgain = await staff.client.rpc("staff_approve_request", { p_booking: a1.data });
     check("5h: approving twice is refused", !!apprAgain.error, apprAgain.error?.message);
     const aud = (await admin.from("audit_log").select("action").eq("entity_id", a1.data)).data ?? [];
@@ -229,6 +231,17 @@ function walk(dir, out = []) {
     check("8b: cancelling a confirmed overnight booking before the cutoff makes a refund owed", !aCancel.error && rowA3.status === "cancelled" && rowA3.refund_owed === true, aCancel.error?.message);
     const afterCancel = await details(A.client, a1.data);
     check("8c: after cancelling, the address and rules are no longer given", (afterCancel.data ?? []).length === 0);
+
+    // ---------- 8b: prices and public settings
+    const monthPrice = await admin.from("prices").update({ amount_kobo: 100000 }).eq("space_id", saved.spaceId).eq("kind", "month").eq("audience", "standard");
+    check("8d: the overnight monthly desk cannot be given a price", !!monthPrice.error && /not offered/i.test(monthPrice.error.message), monthPrice.error?.message);
+    const pub = (await anon.rpc("get_public_settings")).data;
+    check("8e: the public settings list no overnight monthly price", !(pub.prices ?? []).some((p) => p.space === "overnight" && p.kind === "month"));
+    check("8f: the public settings say overnight requests are open", pub.overnight_open === true, String(pub.overnight_open));
+    await admin.from("spaces").update({ is_bookable: false }).eq("slug", "overnight");
+    const pubClosed = (await anon.rpc("get_public_settings")).data;
+    check("8g: when the overnight desks are not open for booking, the public settings say so", pubClosed.overnight_open === false, String(pubClosed.overnight_open));
+    await admin.from("spaces").update({ is_bookable: true }).eq("slug", "overnight");
 
     // ---------- 9: no ID upload anywhere
     const files = walk("src");

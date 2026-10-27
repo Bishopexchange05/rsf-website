@@ -1,43 +1,13 @@
 import Link from "next/link";
-import { createClient } from "@supabase/supabase-js";
 import { Card } from "@/components/Card";
 import { Reveal } from "@/components/Reveal";
 import { publicInfo } from "@/content/admin-settings";
 import { weekdays } from "@/content/admin-settings";
 import { formatNaira } from "@/lib/settings-validation";
-import { accountsEnabled, supabaseConfig, supabaseConfigured } from "@/lib/supabase/config";
+import { loadPublicSettings, type PublicSettings } from "@/lib/public-settings";
 
-// Opening hours, desks and prices on the Tech & Space page. It shows NOTHING
-// unless accounts are switched on for this site AND the Admin has turned the
-// booking switch on in Settings. While the switch is off, the database returns
-// only {"booking_enabled": false}, so no hours or prices can appear early.
-
-type Pub = {
-  booking_enabled: true;
-  hours: { weekday: number; is_closed: boolean; opens_at: string | null; closes_at: string | null }[];
-  day_desks: number;
-  overnight_desks: number;
-  half_day_split: string;
-  monthly_pass_days: number;
-  prices: { space: string; kind: string; audience: string; amount_kobo: number }[];
-};
-
-async function load(): Promise<Pub | null> {
-  if (!accountsEnabled || !supabaseConfigured()) return null;
-  try {
-    const { url, anonKey } = supabaseConfig();
-    const supabase = createClient(url, anonKey, {
-      auth: { persistSession: false, autoRefreshToken: false },
-      // Cached for a minute, so a change in Settings shows within about a minute.
-      global: { fetch: (input, init) => fetch(input, { ...init, next: { revalidate: 60 } }) },
-    });
-    const { data, error } = await supabase.rpc("get_public_settings");
-    if (error || !data || !(data as { booking_enabled?: boolean }).booking_enabled) return null;
-    return data as Pub;
-  } catch {
-    return null;
-  }
-}
+// Opening hours, desks and prices on the Tech & Space page. It shows NOTHING unless accounts are
+// switched on and the Admin has turned booking on (see lib/public-settings).
 
 function clock(hhmm: string | null): string {
   if (!hhmm) return "";
@@ -47,7 +17,7 @@ function clock(hhmm: string | null): string {
 }
 
 export async function PublicWorkspaceInfo() {
-  const info = await load();
+  const info: PublicSettings | null = await loadPublicSettings();
   if (!info) return null;
 
   const price = (space: string, kind: string, audience: string) =>
@@ -72,10 +42,8 @@ export async function PublicWorkspaceInfo() {
     studentLine(publicInfo.perMonth(info.monthly_pass_days), "month"),
   ].filter((l) => l.value !== null);
 
-  const overnight: Line[] = [
-    { label: publicInfo.perNight, value: price("overnight", "night", "standard") },
-    { label: publicInfo.overnightMonth, value: price("overnight", "month", "standard"), optional: true },
-  ].filter((l) => !l.optional || l.value !== null);
+  // Only options that can really be requested are listed. The overnight monthly desk is not offered.
+  const overnight: Line[] = [{ label: publicInfo.perNight, value: price("overnight", "night", "standard") }];
 
   const money = (l: Line) =>
     l.value === null ? (

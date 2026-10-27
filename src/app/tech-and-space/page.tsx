@@ -4,6 +4,7 @@ import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { ClosingSection } from "@/components/ClosingSection";
 import { RequestButton } from "@/components/forms/RequestButton";
+import { loadPublicSettings } from "@/lib/public-settings";
 import { PageHero } from "@/components/PageHero";
 import { PhotoComingSoon } from "@/components/PhotoComingSoon";
 import { PublicWorkspaceInfo } from "@/components/PublicWorkspaceInfo";
@@ -35,7 +36,12 @@ export const metadata: Metadata = {
 
 const anchor = "scroll-mt-24";
 
-export default function TechSpacePage() {
+export default async function TechSpacePage() {
+  // When booking is open on the site, the day and overnight buttons lead to the account booking
+  // pages. While it is off (the live site today) they keep the simple request forms.
+  const pub = await loadPublicSettings();
+  const bookingOn = pub !== null;
+  const overnightOn = pub?.overnight_open === true;
   return (
     <>
       <PageHero
@@ -91,7 +97,9 @@ export default function TechSpacePage() {
           <SectionHeading sub={workspace.intro}>{workspace.heading}</SectionHeading>
         </Reveal>
         <div className="grid gap-6 lg:grid-cols-2">
-          {workspace.cards.map((c, i) => (
+          {workspace.cards.map((c, i) => {
+            const viaBooking = c.form === "day-space" ? bookingOn : overnightOn;
+            return (
             <Reveal key={c.title} delay={i * 0.08} className="h-full">
               <Card className="h-full">
                 <div className="relative -mx-6 -mt-6 mb-6 aspect-[16/10]">
@@ -108,16 +116,17 @@ export default function TechSpacePage() {
                   )}
                 </div>
                 <h3>{c.title}</h3>
-                <p className="mt-3 opacity-85">{c.text}</p>
+                <p className="mt-3 opacity-85">{viaBooking ? c.booking.text : c.text}</p>
                 {"note" in c && (
                   <p className="mt-3 font-semibold text-navy dark:text-dark-green">{c.note}</p>
                 )}
                 <div className="mt-auto pt-6">
-                  <RequestButton type={c.form} label={c.cta} />
+                  {viaBooking ? <Button href={c.booking.href}>{c.booking.cta}</Button> : <RequestButton type={c.form} label={c.cta} />}
                 </div>
               </Card>
             </Reveal>
-          ))}
+            );
+          })}
         </div>
         {/* Hours and prices: appears only when the Admin turns booking on in Settings. */}
         <PublicWorkspaceInfo />

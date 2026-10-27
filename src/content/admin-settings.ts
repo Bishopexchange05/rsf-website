@@ -73,7 +73,7 @@ export const pricingPage = {
   rulesHeading: "What blank means",
   rules: [
     "A blank hour, day or month price (and a blank overnight night price) shows Contact us for pricing and cannot be booked online.",
-    "A blank half-day price, or a blank overnight monthly price, hides that option completely.",
+    "A blank half-day price hides that option completely.",
     "A blank student price means there is no student rate for that option.",
     "A student price can never be higher than the standard price. Students pay by bank transfer like everyone else, and staff check student status in person on arrival.",
     "A student price is used and shown only when the matching standard price is set. With the standard price blank, nobody can book that option online.",
@@ -100,7 +100,6 @@ export const pricingPage = {
       heading: "Overnight workspace",
       rows: [
         { space: "overnight", kind: "night", audience: "standard", label: "Per night" },
-        { space: "overnight", kind: "month", audience: "standard", label: "Per month (optional)" },
       ],
     },
   ],
@@ -124,6 +123,7 @@ export const rulesPage = {
     { name: "monthly_start_window_days", label: "Monthly pass can start up to this many days ahead", help: "0 to 90.", min: 0, max: 90 },
     { name: "monthly_self_cancel_cutoff_hours", label: "Cancel a monthly pass until this many hours before its start", help: "0 to 720.", min: 0, max: 720 },
     { name: "overnight_max_nights", label: "Longest single overnight booking (nights)", help: "1 to 60.", min: 1, max: 60 },
+    { name: "overnight_pay_hours", label: "After an overnight request is approved, the person has this many hours to pay", help: "Longer than the normal hold, because they have just visited the office. 1 to 168.", min: 1, max: 168 },
     { name: "overnight_request_expiry_days", label: "Overnight requests wait this many days for the team", help: "If nobody answers in this time, the request expires and its desks are released. 1 to 30.", min: 1, max: 30 },
   ],
   monthlyHeading: "Monthly pass",
@@ -140,13 +140,13 @@ export const rulesPage = {
 export const overnightPage = {
   title: "Overnight details",
   heading: "Overnight details",
-  text: "Private. The location is never shown on the website. It is shared only with someone whose overnight booking is approved and paid.",
+  text: "Private. The address and house rules are never shown on the public website. They are shown only to a member whose overnight booking is confirmed (approved and payment confirmed), on their booking page and in their confirmation email.",
   checkin: "Check-in time",
   checkout: "Check-out time",
   location: "Location (private)",
   locationHelp: "Address and directions. Up to 500 characters.",
   rules: "House rules",
-  rulesHelp: "Shown to approved guests. Up to 2000 characters.",
+  rulesHelp: "Shown only to a member whose overnight booking is confirmed. Up to 2000 characters.",
   save: "Save overnight details",
 };
 
@@ -181,7 +181,6 @@ export const publicInfo = {
   student: "Student price",
   studentNote: "Students pay the student price and show their student ID to our team when they arrive.",
   perNight: "Overnight, per night",
-  overnightMonth: "Overnight, per month",
   overnightNote: "Overnight stays are for people 18 or over and are approved in person first.",
   book: { label: "Book a desk", href: "/book" },
   halfDayNote: (split: string) => `Half day: morning until ${split}, or afternoon from ${split}.`,
