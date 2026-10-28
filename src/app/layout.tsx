@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
-import { AnnouncementBar } from "@/components/AnnouncementBar";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { site } from "@/content/site";
@@ -69,9 +68,8 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body suppressHydrationWarning>
-        {/* One fixed block: announcement bar (until 16 Oct 2026) above the header. */}
+        {/* One fixed block holding the header. */}
         <div className="fixed inset-x-0 top-0 z-50">
-          <AnnouncementBar />
           <Header />
         </div>
         <main>{children}</main>
