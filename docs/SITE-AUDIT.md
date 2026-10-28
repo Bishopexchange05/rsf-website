@@ -138,7 +138,7 @@ This keeps one payment method, one confirmation screen for staff, and no new pay
 2. Canonical URL on every page.
 3. Per-page Open Graph titles, descriptions and URLs.
 4. Fixed `lastModified` dates in the sitemap.
-5. `noindex` without `Disallow` for the five publicly linked auth pages (your decision).
+5. `noindex` without `Disallow` for the five publicly linked auth pages (**decided: yes**; to be done with the next code change).
 6. Place the newsletter form (it already exists) in the footer or on the home page.
 7. Tidy over-long and too-short meta descriptions (copy changes, you approve the wording).
 8. Add Tech & Space structured data and a `WebSite` entry.

@@ -15,7 +15,7 @@ Data Protection / NDPR Statement), generated from the website's own content file
 
 The website has so far only collected request forms by email. The booking system (Phase 2) adds the
 following. None of it is live to the public yet: booking stays switched off until the gates in
-`docs/PHASE2-PLAN.md` are met, including this review.
+the conditions the Foundation has set are met, including this review.
 
 **Accounts.** A person can register with name, phone number, email address and a password (the password
 is stored hashed by our database provider, never in readable form). They must accept the Terms and
@@ -41,8 +41,9 @@ second step. Their actions on bookings, payments, refunds and settings are recor
 
 **Emails.** The website sends emails about accounts and bookings (verification, booking held, payment
 being checked, confirmed, rejected, cancelled, overnight approval). They are sent through Gmail until the
-Foundation's own domain is verified with an email service (Resend). Each email is logged (recipient,
-template, success or failure, not the message body).
+Foundation's own domain is verified with an email service (Resend). Each email is logged
+(which account it was for, the type of email, whether it was sent or failed, and any error from the
+provider; not the message text and not the email address).
 
 **Service providers (processors).** Supabase (database, login, hosted outside Nigeria), Vercel (website
 hosting), Google (Gmail mailbox and sending, until the domain switch), Resend (email delivery, once the

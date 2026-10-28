@@ -40,11 +40,12 @@ real limits are not size. They are: no automatic backups, pausing, and no suppor
 2. A guarantee the project will not pause (we add a keep-alive, section 3, but it is our workaround).
 3. Support if something breaks on a day with real money moving.
 
-**My recommendation:** build the keep-alive and backups on Free now, and upgrade the **production**
-project to Pro before booking is opened to the public. At $25 a month it buys daily backups, no pausing
-and support. Keep the development project on Free.
+**Decision (owner, 28 October 2026): stay on the Supabase Free plan for now.** No real paying users use the
+system yet. Upgrade the production project to Pro when there are real paying users, or earlier if any
+trigger in section 2 fires. This is exactly why the keep-alive (section 3) and the backups (section 4) matter:
+on Free, nothing else stops the project pausing or saves the data if something goes wrong.
 
-### 1.2 Vercel Hobby plan (decision needed before launch)
+### 1.2 Vercel Hobby plan (decided: stay on Hobby until real customers pay through the site)
 
 | Item | Hobby | Source |
 | --- | --- | --- |
@@ -54,24 +55,28 @@ and support. Keep the development project on Free.
 | Usage included | 100 GB data transfer, 1,000,000 function calls a month | [Hobby plan](https://vercel.com/docs/plans/hobby) |
 | Pro | $20 per user a month; unlimited projects; cron every minute | Hobby plan page |
 
-**The decision:** the booking system shows bank details and asks visitors to pay for desks. That looks like
-"requesting payment from visitors", which the Hobby terms call commercial use, even though the money
-goes to a charity. I cannot give a legal answer. You have two options: (a) move the Vercel team to Pro
-($20 a month) before booking opens, or (b) ask Vercel support in writing whether a charity taking
-bank-transfer bookings is acceptable on Hobby, and keep the answer. My recommendation is (a), because
-a suspension on a day with paying customers is worse than $20.
+**Decision (owner, 28 October 2026): stay on the Vercel Hobby plan for now.** Nothing is paid for through the
+website yet: clients pay by transfer at the office. The Hobby terms are non-commercial, and "requesting payment
+from visitors of the site" is their own example of commercial use. So **the day real customers start booking
+and paying through the site, Vercel must already be on Pro ($20 a month)**. That makes "Vercel on Pro" one of
+the gates for turning booking on (with the verified email domain, the lawyer review and the production
+Supabase project). Asking for donations does not count as commercial use.
 
 ## 2. Upgrade triggers (when to pay for more)
 
-Upgrade the Supabase **production** project to Pro when **any** of these happens:
-- Before booking opens to the public (my recommendation, see above).
-- Database size reaches 350 MB (70% of 500 MB), or egress passes 3.5 GB in a month.
-- About 50 registered members (the point where losing data would hurt real people).
-- A scheduled backup or keep-alive fails twice in a row and cannot be fixed the same day.
-- You need point-in-time recovery, or support, for example after a payment dispute.
-- Supabase asks for it (an email warning about limits or pausing).
+**Decision (owner):** stay on Free for now on both services, and upgrade when we have real paying users, or
+earlier if a trigger fires.
 
-Move Vercel to Pro **before booking opens** (see 1.2), or earlier if usage emails arrive.
+Upgrade the Supabase **production** project to Pro when **any** of these happens:
+- **Real paying users** start using the system (the first real booking paid through the site).
+- The database reaches about **350 MB** (70% of the 500 MB limit), or data out passes 3.5 GB in a month.
+- About **50 registered members**.
+- A scheduled **backup or keep-alive fails twice in a row** and cannot be fixed the same day.
+- You need **point-in-time recovery** or **support** (for example after a payment dispute).
+- Supabase warns you about limits or an upcoming pause.
+
+Move **Vercel to Pro** when real customers start booking and paying through the website (before booking opens
+to the public), or earlier if Vercel sends a usage or terms warning.
 
 ## 3. Keep-alive (so a free project does not pause)
 
@@ -102,18 +107,55 @@ Actions is free and independent of the website.
 press **Resume project**. The data and settings return as they were. Restore is possible within 1 year of
 the pause. Note a paused project does not answer logins or bookings until it is resumed.
 
+### 3.1 Making sure the keep-alive and the backup can never stop silently
+
+**The risk.** GitHub switches off scheduled jobs in a public repository after 60 days with no "repository
+activity". GitHub does not say exactly what counts, and reports say the switch-off can be silent (no
+email). A job can also fail, be delayed, or be dropped. So I do not rely on one safeguard. There are five
+layers, all free:
+
+1. **GitHub emails you when a run fails** (its default for the person who owns the schedule). This catches
+   "the job ran and failed". It does **not** catch "the job stopped running", which is why layer 2 exists.
+2. **A "dead man's switch" (the one that really protects you).** Each job, when it **succeeds**, sends one
+   tiny ping to a free monitoring service (Healthchecks.io; its free plan lists 20 monitored jobs). The
+   service expects a ping every day. **If no ping arrives for about 26 hours, it emails you.** That catches
+   every way of stopping: a switched-off schedule, a failed run, a deleted workflow, a GitHub outage.
+   The alert reaches you within a day, so the 7-day Supabase pause is never close. It holds only the time
+   of the ping, no data. The ping addresses are stored as GitHub secrets.
+3. **The job keeps its own schedule alive.** At the end of every run it asks GitHub to enable the workflow
+   again (a one-line call that needs no extra key). Because the keep-alive runs daily, this happens daily.
+   I cannot prove from the documentation that this restarts the 60-day clock, so it is a helper, not the
+   guarantee: layer 2 is the guarantee.
+4. **A real commit once a month.** A small scheduled job writes one line (the date) to a file on a separate
+   branch called `ops-heartbeat` (never `main`, so the live site is never redeployed; the commit message
+   asks Vercel to skip building). A commit is the activity most often reported to reset the clock. If
+   layers 2 and 3 are working, this is belt and braces.
+5. **Your own habits and Supabase's warning.** Your normal pushes to this repository count as activity.
+   Supabase also emails you about a week before it would pause a project. Put a monthly reminder in your
+   calendar: "open GitHub, Actions tab, check both workflows are green".
+
+**What an alert means and what to do.** An email from Healthchecks.io saying "keep-alive is DOWN" or "backup is
+DOWN": open the repository, **Actions** tab, click the workflow named in the email, and if a banner says it is
+disabled, press **Enable workflow**; then press **Run workflow** to test it. The monitor turns green again by
+itself. Later (in M8, once there is a production site) I will also add a daily check inside the website
+itself that emails you if the last backup or keep-alive is older than 36 hours.
+
 ## 4. Backups (encrypted, private, and proven to restore)
+
+**Retention in one plain sentence (decided by the owner):** we keep a backup for every one of the last 14
+days, plus one backup for each of the last 12 months, so that if a mistake is noticed late you can go back
+about two weeks day by day, and about a year month by month.
 
 **Design.**
 1. A GitHub Actions workflow runs every night.
-2. It connects with a **read-only database role** that exists only for backups (section 5, step 3), through
+2. It connects with a **read-only database role** that exists only for backups (section 5), through
    Supabase's session pooler (GitHub's servers cannot use the direct address, which is IPv6 only).
 3. It takes two dumps: the whole `public` schema (all booking, profile, settings, payment and audit data,
    plus the security rules and functions) and the data of the login tables (`auth.users`, identities and
    two-step factors) so accounts can be restored.
 4. It **proves each backup restores**: it restores the `public` dump into a throwaway Postgres database
    inside the job and checks table and row counts against the source. A backup that cannot restore fails
-   the job and emails you. This is the "real restore into a scratch location" and it never touches the
+   the job and raises an alert. This is the "real restore into a scratch location" and it never touches the
    live data.
 5. It encrypts the dumps with your **public** key (GPG). Only your private key can decrypt them. The
    private key is never in GitHub.
@@ -143,52 +185,28 @@ I will test steps 3 to 5 for real before calling backups finished, on a throwawa
 
 **Where a paused or deleted project's data lives:** nowhere else. That is why the backups matter.
 
-## 5. What you must do before I build (setup steps, in order)
+## 5. Setup walk-through (one step at a time, with the assistant)
 
-I will not build the parts that need secrets until you tell me these are done. **Never paste any of these
-values into chat.** Put each one only where the step says.
+I will not build the parts that need secrets until every step here is done. **You never paste any key,
+connection string, token, passphrase or private key into chat.** Each step says where the value goes and
+you only tell me "done". Each secret step ends with a way to check it is right without showing it.
 
-**Step 1. A private repository for the backups.**
-GitHub, top right "+", **New repository**. Name: `rsf-backups`. Choose **Private**. Create it (no files
-needed).
+The steps, in order:
+- **A.** A private GitHub repository named `rsf-backups`.
+- **B.** The encryption key pair on your computer (private key and passphrase go to your password manager and
+  a USB stick).
+- **C.** A read-only backup user in the DEVELOPMENT Supabase project, and its connection string.
+- **D.** A GitHub access token that can write only to `rsf-backups`.
+- **E.** The development Supabase project address and publishable key.
+- **F.** A free Healthchecks.io account with two checks, one for the keep-alive and one for the backup
+  (section 3.1, layer 2).
+- **G.** Adding everything as GitHub secrets, with these exact names:
+  `BACKUP_GPG_PUBLIC_KEY`, `BACKUP_REPO_TOKEN`, `DEV_DB_BACKUP_URL`, `DEV_SUPABASE_URL`,
+  `DEV_SUPABASE_PUBLISHABLE_KEY`, `HC_KEEPALIVE_URL`, `HC_BACKUP_URL`.
+  Later, for production: `PROD_DB_BACKUP_URL`, `PROD_SUPABASE_URL`, `PROD_SUPABASE_PUBLISHABLE_KEY`.
 
-**Step 2. An encryption key pair (on your computer, in Git Bash).**
-Run: `gpg --quick-generate-key "RSF Backups" rsa4096 encr 5y`
-It asks you to choose a passphrase: use a long one and save it in your password manager. Then:
-`gpg --armor --export "RSF Backups" > rsf-backups-public.asc` and
-`gpg --armor --export-secret-keys "RSF Backups" > rsf-backups-PRIVATE.asc`.
-Save **rsf-backups-PRIVATE.asc** and its passphrase in your password manager and on one USB stick kept
-somewhere safe. If you lose them, the backups are unreadable. Do not put the private file in GitHub or
-in the project folder. Open `rsf-backups-public.asc` in a text editor: its contents go in step 6.
-
-**Step 3. A read-only backup user in each Supabase project.**
-In the Supabase dashboard, **SQL Editor**, new query, open the file `supabase/ops/backup-role.sql` once I
-have added it, replace the one placeholder with a long random password you generate in your password
-manager, and run it. (The file only creates a user that can read data. It cannot change anything.)
-Then **Connect** (top of the project page), choose **Session pooler**, and copy the connection string.
-Replace `[YOUR-PASSWORD]` with that password and the user name with `backup_reader.<your project ref>`.
-Keep this string for step 6.
-
-**Step 4. A token that lets the workflow write only into `rsf-backups`.**
-GitHub, your profile picture, **Settings**, **Developer settings**, **Personal access tokens**,
-**Fine-grained tokens**, **Generate new token**. Name: `rsf-backup-writer`. Expiration: 1 year (put a
-reminder in your calendar). **Repository access: Only select repositories: `rsf-backups`.**
-Permissions: **Contents: Read and write**. Nothing else. Generate and copy it for step 6.
-
-**Step 5. Keep-alive values.** In each Supabase project: **Project Settings**, **API Keys**: copy the
-project URL and the **publishable** key (the one that is safe for browsers).
-
-**Step 6. Store them as GitHub secrets.** In the **rsf-website** repository: **Settings**, **Secrets and
-variables**, **Actions**, **New repository secret**. Create these (names exactly):
-- `BACKUP_GPG_PUBLIC_KEY` (the contents of `rsf-backups-public.asc`)
-- `BACKUP_REPO_TOKEN` (the token from step 4)
-- `DEV_DB_BACKUP_URL` (the string from step 3 for the development project)
-- `DEV_SUPABASE_URL` and `DEV_SUPABASE_PUBLISHABLE_KEY` (step 5)
-Later, when the production project exists, add `PROD_DB_BACKUP_URL`, `PROD_SUPABASE_URL` and
-`PROD_SUPABASE_PUBLISHABLE_KEY`.
-
-**Step 7. Tell me two decisions:** (a) retention: keep 14 daily and 12 monthly backups, yes or no; (b) may I
-make a **workflow-only** change to `main` (see below)?
+Decisions already made by the owner: retention 14 daily and 12 monthly (section 4); the schedules go to
+`main` only by a separate workflow-only change that the owner approves (section 6).
 
 ## 6. Getting the schedules switched on
 

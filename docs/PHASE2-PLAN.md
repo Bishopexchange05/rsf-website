@@ -653,3 +653,30 @@ sign-off, then the staged merge above.
 `hotfix/remove-announcement-banner`, merged only on the owner's approval); `docs/PLANNING-SITEMAP.md` holds
 the planning sitemap; `docs/SITE-AUDIT.md`, `docs/CONTENT-PLAN.md` (M9 content manager, plan only),
 `docs/OPERATIONS-PLAN.md` and `docs/LEGAL-REVIEW.md` were written.
+
+## Decisions recorded 28 October 2026 (after the combined review)
+
+- **Banner hotfix approved and merged.** `hotfix/remove-announcement-banner` was fast-forwarded into `main`
+  (one change, `src/app/layout.tsx`, commit 7ab35a2) and then `main` was merged into `phase-2` with no
+  conflicts.
+- **Vercel: stay on Hobby for now.** Nothing is paid for through the website yet; clients pay by transfer at
+  the office. Upgrade to Pro when real customers start booking and paying through the site, because the Hobby
+  terms are non-commercial. "Vercel on Pro" is added as a gate for turning booking on.
+- **Supabase: stay on Free for now.** Upgrade when there are real paying users, or earlier if a trigger fires:
+  database near 350 MB, about 50 members, a backup or keep-alive failing twice, a need for point-in-time
+  recovery or support. This is why the keep-alive and backups matter. Details in `docs/OPERATIONS-PLAN.md`.
+- **Backup retention: 14 daily and 12 monthly.** In plain words: a backup for each of the last 14 days plus one
+  for each of the last 12 months.
+- **The five sign-in pages** (login, register, forgot password, reset password, verify email) **stay `noindex` but
+  crawlable** (not blocked in `robots.txt`).
+- **Content manager (M9): all four pieces approved in scope** (banner, posts, images, testimonials and impact
+  counters). Staff and Admin edit, only Admin deletes, every change is audited. **The banner and the posts are
+  built first.** Building M9 has not started and waits for the owner's go.
+- **Lawyer pack:** the owner will send `docs/LEGAL-REVIEW.md` to the lawyer personally.
+- **Keep-alive must never stop silently.** Five free layers (failure email, a dead man's switch that emails if
+  no success ping arrives for about 26 hours, the job re-enabling itself, a monthly commit to a separate
+  branch, and the owner's calendar reminder). Details in `docs/OPERATIONS-PLAN.md` section 3.1.
+- **Setup walk-through** for the backup and keep-alive secrets is being done one step at a time. Afterwards the
+  keep-alive and backup are built and tested on `phase-2`; the schedules switch on only through a separate
+  workflow-only change to `main` that needs the owner's approval. M8 does not start until the hotfix is merged
+  (done), the backup is tested and the owner approves.
