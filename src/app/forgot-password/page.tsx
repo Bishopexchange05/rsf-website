@@ -15,7 +15,7 @@ export default function Page() {
     <AuthPage heading={forgot.heading} text={forgot.text}>
       <ForgotPasswordForm />
       <p className="mt-6 text-sm">
-        <Link href={forgot.back.href} className="font-medium underline underline-offset-2">
+        <Link href={forgot.back.href} className="inline-flex min-h-11 items-center font-medium underline underline-offset-2">
           {forgot.back.label}
         </Link>
       </p>

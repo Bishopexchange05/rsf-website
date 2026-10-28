@@ -24,7 +24,7 @@ export function Footer() {
 
         {footerColumns.slice(0, 2).map((col) => (
           <div key={col.title}>
-            <h3 className={heading}>{col.title}</h3>
+            <h2 className={heading}>{col.title}</h2>
             <ul className="mt-3 text-sm text-white/80">
               {col.links.map((l) => (
                 <li key={l.href}>
@@ -38,7 +38,7 @@ export function Footer() {
         ))}
 
         <div>
-          <h3 className={heading}>Contact</h3>
+          <h2 className={heading}>Contact</h2>
           <ul className="mt-3 text-sm text-white/80">
             <li className="py-2">{site.address}</li>
             {site.email && (

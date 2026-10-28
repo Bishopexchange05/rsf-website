@@ -51,24 +51,25 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ d
   // Monthly pass: the start date being checked (default today) and whether a pass is free from it.
   const lastStart = addDays(today, config.monthly_start_window_days);
   const start = startParam && isIsoDate(startParam) && startParam >= today && startParam <= lastStart ? startParam : today;
-  let avail: Availability | null = null;
-  if (config.prices.month) {
-    const { data: a } = await supabase.rpc("get_monthly_availability", { p_start: start });
-    avail = ((a as Availability[] | null) ?? [])[0] ?? null;
-  }
-
-  // A pass that already covers this day: nothing more to book for it.
-  const { data: covering } = await supabase
-    .from("bookings")
-    .select("status, hold_expires_at")
-    .eq("kind", "month")
-    .lte("starts_at", `${date}T00:00:00+01:00`)
-    .gt("ends_at", `${date}T00:00:00+01:00`)
-    .in("status", ["pending_payment", "payment_claimed", "confirmed"]);
+  // The three database lookups do not depend on each other, so they run together. Each is a
+  // round trip to the database, so running them one after another made the page slow.
+  const [availRes, coveringRes, slotRes] = await Promise.all([
+    config.prices.month ? supabase.rpc("get_monthly_availability", { p_start: start }) : Promise.resolve({ data: null }),
+    // A pass that already covers this day: nothing more to book for it.
+    supabase
+      .from("bookings")
+      .select("status, hold_expires_at")
+      .eq("kind", "month")
+      .lte("starts_at", `${date}T00:00:00+01:00`)
+      .gt("ends_at", `${date}T00:00:00+01:00`)
+      .in("status", ["pending_payment", "payment_claimed", "confirmed"]),
+    supabase.rpc("get_day_availability", { p_date: date }),
+  ]);
+  const avail: Availability | null = ((availRes.data as Availability[] | null) ?? [])[0] ?? null;
+  const covering = coveringRes.data;
   const covered = (covering ?? []).some((r) => r.status !== "pending_payment" || (r.hold_expires_at && new Date(r.hold_expires_at).getTime() > Date.now()));
 
-  const { data: slotData } = await supabase.rpc("get_day_availability", { p_date: date });
-  const slots = (slotData as Slot[] | null) ?? [];
+  const slots = (slotRes.data as Slot[] | null) ?? [];
   const bookable = (s: Slot) => s.open_for_booking && s.remaining > 0;
 
   const morning = slots.filter((s) => lagosHHMM(s.slot_start) < config.half_day_split);
@@ -114,7 +115,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ d
         </Form>
         <p className="mt-3 font-semibold">{dayName}</p>
         <p className="mt-1 text-sm">
-          <Link href={bookPage.accountLink.href} className="font-medium underline underline-offset-2">
+          <Link href={bookPage.accountLink.href} className="inline-flex min-h-11 items-center font-medium underline underline-offset-2">
             {bookPage.accountLink.label}
           </Link>
         </p>
@@ -141,7 +142,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ d
               />
             ) : (
               <p className="mt-3">
-                <Link href={bookPage.contactHref} className="font-medium underline underline-offset-2">
+                <Link href={bookPage.contactHref} className="inline-flex min-h-11 items-center font-medium underline underline-offset-2">
                   {bookPage.prices.contact}
                 </Link>
               </p>
@@ -190,7 +191,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ d
               </ActionForm>
             ) : (
               <p className="mt-3">
-                <Link href={bookPage.contactHref} className="font-medium underline underline-offset-2">
+                <Link href={bookPage.contactHref} className="inline-flex min-h-11 items-center font-medium underline underline-offset-2">
                   {bookPage.prices.contact}
                 </Link>
               </p>
@@ -267,7 +268,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ d
           </>
         ) : (
           <p className="mt-3">
-            <Link href={pass.contactHref} className="font-medium underline underline-offset-2">
+            <Link href={pass.contactHref} className="inline-flex min-h-11 items-center font-medium underline underline-offset-2">
               {pass.contact}
             </Link>
           </p>

@@ -611,3 +611,45 @@ Out of scope for this plan (listed in CLAUDE.md as Phase 2 but later): courses/L
 - **M7 started (27 October 2026) with these decisions:** approve-then-pay (the team meets the person and checks ID in person, then approves, then the person pays); the night price stays blank until the owner sets it (tests use a temporary figure and clear it); the optional overnight monthly desk is off for launch with its price blank, so it is not built in M7; the longest single stay is 7 nights and editable; check-in and check-out times are entered by the owner in Settings (tests use test values); a request nobody answers expires after 3 days (editable in Settings as "Overnight requests wait this many days") and frees its desks; the owner enters the private address and house rules in Settings, and they are returned only to the owner of a confirmed overnight booking, on their booking page and in the confirmed email; the "come and meet us" email gives the WhatsApp link and the office hours (read from the opening hours in Settings); a member can have one request waiting at a time; an approved request gets the normal hold (hold time in Settings) and an expired approved request can be re-opened by Staff, but a request that was never approved cannot. The CLAUDE.md line "the overnight location is never shown on the site, it is shared in person" is to be updated, only when the owner says so, to match this: it is shown only in a confirmed member's account and email.
 - **M7 review changes (28 October 2026):** CLAUDE.md, the Tech & Space card text and the Overnight settings text now say the overnight address and house rules are shown only to a member whose overnight booking is payment-confirmed (checked: the terms, privacy text and emails never said otherwise); an approved overnight request gets its own pay window, 24 hours by default, editable in Booking rules (migration 0011); on Tech & Space, when booking is on the day button goes to /book and the overnight button goes to /book/overnight (only when overnight requests are open), and when booking is off the old request forms stay; the "Overnight, per month" public line is gone, the overnight monthly desk can no longer be given a price (removed from Prices, refused by the database, and any stored price is cleared); the Admin "Open" crash was investigated on a clean production build: every booking type and state opens normally, so it is the development server running out of resources on this computer (the dev log shows write EPIPE and compile times of 10 to 40 seconds).
 - **M7 approved as finished by the owner (28 October 2026).** Tested locally and on the Vercel preview: requesting overnight nights with the 18 or over tick, in-person approval and rejection, the 24-hour pay window, payment and confirmation, the private address and house rules appearing only after confirmation, expiry of unanswered requests, the Tech & Space buttons in both states, and the removal of the overnight monthly price. The automated overnight test passed 49 of 49. Migrations run on the development database: 0010, 0011. Accepted deferral: the optional overnight monthly desk is not built (off for launch). M8 (hardening, NDPA and launch) has not started and needs separate approval.
+
+## M8 answers and staged launch (recorded 28 October 2026)
+
+These are the owner's decisions for M8. M8 has **not started** and needs separate approval.
+
+**Staged launch (replaces the single "go live" step).** The launch date is decided by the gates below;
+16 October has passed.
+1. **Merge `phase-2` into `main` with accounts and booking switched OFF in production**, so visitors see no
+   change (the public pages answer as today; account paths return a true 404). Needs the owner's explicit
+   approval and a CLAUDE.md update at that point.
+2. **When DNS access arrives**, verify the domain with Resend and switch email over by configuration only
+   (checklist in 3A.5). The owner does not have DNS access and does not know when it will return.
+3. **Turn booking on only when all three are true:** the email domain is verified, the owner's lawyer has
+   reviewed the new text (`docs/LEGAL-REVIEW.md`), and the production Supabase project exists.
+
+**Reminder emails (my defaults, approved):** the day before at about 5:00 PM; monthly pass "starts tomorrow"
+(one day before the start) and "ends in 5 days" (with Renew); "hold expiring" about 30 minutes before the
+hold ends. Failed-email retry is part of the same scheduled job.
+
+**Retention:** personal booking data is kept 12 months and then anonymised. The email log is kept 12 months.
+Accounting amounts and the audit log stay.
+
+**Legal review:** the privacy, terms, NDPR and safeguarding text, the new booking wording and the questions
+for the lawyer are in one document, `docs/LEGAL-REVIEW.md`.
+
+**Supabase and Vercel plans (recommended; the owner confirms):** the development project stays on Supabase
+Free. Build a keep-alive and encrypted off-site backups now (`docs/OPERATIONS-PLAN.md`). **Upgrade the
+production project to Supabase Pro before booking opens**, and move Vercel to Pro before booking opens,
+because Vercel Hobby is non-commercial and requesting payment from visitors counts as commercial use.
+Upgrade triggers are listed in `docs/OPERATIONS-PLAN.md`.
+
+**Revised M8 contents.** Code: scheduled reminder emails and failed-email retry; download my data; delete
+my account; the retention job; final legal text once the lawyer reviews it; the keep-alive and backups.
+Checks: load and concurrency tests, accessibility, dark mode, PageSpeed (target stays 99 on mobile), a real
+phone over a slow network, the booking-off rollback, the verified-email fallback, a restore rehearsal.
+Launch steps: production Supabase project and Vercel production variables, backups confirmed, owner
+sign-off, then the staged merge above.
+
+**Other work recorded in this round:** a one-change hotfix removed the expired announcement banner (branch
+`hotfix/remove-announcement-banner`, merged only on the owner's approval); `docs/PLANNING-SITEMAP.md` holds
+the planning sitemap; `docs/SITE-AUDIT.md`, `docs/CONTENT-PLAN.md` (M9 content manager, plan only),
+`docs/OPERATIONS-PLAN.md` and `docs/LEGAL-REVIEW.md` were written.

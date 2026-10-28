@@ -47,7 +47,7 @@ export async function PublicWorkspaceInfo() {
 
   const money = (l: Line) =>
     l.value === null ? (
-      <Link href={publicInfo.contactLink.href} className="font-medium underline underline-offset-2">
+      <Link href={publicInfo.contactLink.href} className="inline-block py-1 font-medium underline underline-offset-2">
         {publicInfo.contactForPricing}
       </Link>
     ) : (

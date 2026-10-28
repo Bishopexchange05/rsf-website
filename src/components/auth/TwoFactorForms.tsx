@@ -187,7 +187,7 @@ export function ChallengeForm() {
         <Submit label={twoFactor.challenge.submit} />
       </form>
       <p className="text-sm">
-        <Link href={twoFactor.challenge.recoveryLink.href} className="font-medium underline underline-offset-2">
+        <Link href={twoFactor.challenge.recoveryLink.href} className="inline-flex min-h-11 items-center font-medium underline underline-offset-2">
           {twoFactor.challenge.recoveryLink.label}
         </Link>
       </p>
@@ -212,7 +212,7 @@ export function RecoveryForm() {
         <Submit label={twoFactor.recovery.submit} />
       </form>
       <p className="text-sm">
-        <Link href={twoFactor.recovery.back.href} className="font-medium underline underline-offset-2">
+        <Link href={twoFactor.recovery.back.href} className="inline-flex min-h-11 items-center font-medium underline underline-offset-2">
           {twoFactor.recovery.back.label}
         </Link>
       </p>

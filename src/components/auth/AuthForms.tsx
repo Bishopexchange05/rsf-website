@@ -198,7 +198,7 @@ export function LoginForm() {
       <Field name="password" label={fields.currentPassword.label} type="password" autoComplete="current-password" />
       <SubmitButton label={login.submit} />
       <p className="text-sm">
-        <Link href={login.forgot.href} className="font-medium underline underline-offset-2">
+        <Link href={login.forgot.href} className="inline-flex min-h-11 items-center font-medium underline underline-offset-2">
           {login.forgot.label}
         </Link>
       </p>

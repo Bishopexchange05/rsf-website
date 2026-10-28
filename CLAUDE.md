@@ -6,7 +6,8 @@ charity supporting youth education through scholarships and
 competitions. The site presents the Foundation's mission, impact and
 programmes, including "RSF Tech and Space" (workspace, media room,
 Learning Hub, consulting, media agency), which is run under the
-Foundation. Launch target: Oct 16. Built in two phases. Read
+Foundation. The launch date is set by the gates in `docs/PHASE2-PLAN.md`
+(the 16 October target has passed). Built in two phases. Read
 PHASE_STATUS before implementing anything.
 
 ## Tone

@@ -103,7 +103,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ c
           <p className="mt-1">{overnight.price(formatNaira(price), formatNaira(price * nights), nights)}</p>
         ) : (
           <p className="mt-1">
-            <Link href={overnight.contactHref} className="font-medium underline underline-offset-2">
+            <Link href={overnight.contactHref} className="inline-flex min-h-11 items-center font-medium underline underline-offset-2">
               {overnight.priceContact}
             </Link>
           </p>
@@ -136,7 +136,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ c
       </Card>
 
       <p className="mt-6 text-sm">
-        <Link href={overnight.back.href} className="font-medium underline underline-offset-2">
+        <Link href={overnight.back.href} className="inline-flex min-h-11 items-center font-medium underline underline-offset-2">
           {overnight.back.label}
         </Link>
       </p>
