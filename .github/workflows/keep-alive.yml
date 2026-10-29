@@ -1,0 +1,72 @@
+# Keep-alive: once a day, ask the DEVELOPMENT database one small question so Supabase never sees
+# the free project as inactive (it pauses free projects after 7 days of low activity).
+#
+# It uses only the project's publishable key, through a public database function. It sends no
+# data and prints no keys. On success it pings the Healthchecks.io monitor; if no ping arrives for
+# about 26 hours, that service emails the owner (this is what catches a silently stopped schedule).
+# See docs/OPERATIONS-PLAN.md section 3.1.
+#
+# Triggers: the schedule below, and the "Run workflow" button in the Actions tab.
+
+name: Keep-alive
+
+on:
+  schedule:
+    - cron: "17 4 * * *"
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: keep-alive
+  cancel-in-progress: false
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      SUPABASE_URL: ${{ secrets.DEV_SUPABASE_URL }}
+      SUPABASE_KEY: ${{ secrets.DEV_SUPABASE_PUBLISHABLE_KEY }}
+      HC_URL: ${{ secrets.HC_KEEPALIVE_URL }}
+    steps:
+      - name: Ask the development database a question
+        run: |
+          set -euo pipefail
+          if [ -z "${SUPABASE_URL}" ] || [ -z "${SUPABASE_KEY}" ]; then
+            echo "::error::A required secret is missing (DEV_SUPABASE_URL or DEV_SUPABASE_PUBLISHABLE_KEY)."
+            exit 1
+          fi
+          code=$(curl -sS -o answer.json -w '%{http_code}' --max-time 30 --retry 2 --retry-delay 5 \
+            -X POST "${SUPABASE_URL%/}/rest/v1/rpc/get_public_settings" \
+            -H "apikey: ${SUPABASE_KEY}" -H "Content-Type: application/json" -d '{}')
+          echo "Supabase answered with HTTP status ${code}."
+          if [ "${code}" != "200" ]; then
+            echo "::error::Supabase did not answer normally (HTTP ${code}). The project may be paused or the key is wrong."
+            exit 1
+          fi
+          if ! grep -q "booking_enabled" answer.json; then
+            echo "::error::Supabase answered, but not with the expected content."
+            exit 1
+          fi
+          echo "The database answered correctly."
+
+      - name: Tell the monitor it worked
+        run: |
+          if [ -z "${HC_URL}" ]; then echo "::warning::HC_KEEPALIVE_URL is not set, so no monitor was told."; exit 0; fi
+          curl -fsS -m 15 --retry 3 --retry-delay 5 -o /dev/null "${HC_URL}"
+          echo "Monitor told."
+
+      - name: Tell the monitor it failed
+        if: failure()
+        run: |
+          if [ -n "${HC_URL}" ]; then curl -fsS -m 15 --retry 3 -o /dev/null "${HC_URL%/}/fail" || true; fi
+
+      - name: Ask GitHub to keep this schedule switched on
+        if: success() && github.ref == 'refs/heads/main'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow enable keep-alive.yml --repo "${GITHUB_REPOSITORY}"
