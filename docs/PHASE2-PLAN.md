@@ -680,3 +680,8 @@ the planning sitemap; `docs/SITE-AUDIT.md`, `docs/CONTENT-PLAN.md` (M9 content m
   keep-alive and backup are built and tested on `phase-2`; the schedules switch on only through a separate
   workflow-only change to `main` that needs the owner's approval. M8 does not start until the hotfix is merged
   (done), the backup is tested and the owner approves.
+
+- **Keep-alive, backup and heartbeat switched on (29 October 2026).** The owner confirmed the three checks
+  (Healthchecks green, the daily folder with three files in `rsf-backups`, and a decrypted dump starting with
+  PGDMP) and approved the separate workflow-only change to `main`. It added only `.github/workflows/` (3 files)
+  and `ops/backup.sh`, then `main` was merged into `phase-2`. M8 has not started.

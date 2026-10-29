@@ -5,8 +5,11 @@ sections 3 to 5 (29 October 2026):** the setup in section 5 is done (all seven G
 the encryption keys, the monitor). The keep-alive, the nightly backup and the monthly heartbeat are built
 (`.github/workflows/`, `ops/backup.sh`) and **tested from `phase-2`** by a push trigger: the keep-alive and
 the heartbeat passed, and the backup passed end to end (dump, restore test in a throwaway database,
-encryption, storage in the private repository, monitor ping). **The schedules are not switched on yet**: that
-needs a separate workflow-only change to `main` (section 6), which waits for the owner's approval.
+encryption, storage in the private repository, monitor ping). **The schedules were switched on on
+29 October 2026** by the owner-approved, workflow-only change to `main` (commit 8e65617: only the three
+workflow files and `ops/backup.sh`, with the test triggers removed). Times (UTC): backup 02:43 daily,
+keep-alive 04:17 daily, heartbeat 05:11 on the 1st of each month. GitHub may delay a scheduled run by up to
+an hour or so.
 
 ## 1. What the free plans really allow (checked against the current documents)
 
