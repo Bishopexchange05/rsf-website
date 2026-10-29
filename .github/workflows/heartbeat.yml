@@ -1,0 +1,53 @@
+# Monthly heartbeat: one tiny commit to a separate branch (never main), so this public repository
+# always shows recent activity and GitHub does not switch off the scheduled jobs after 60 days.
+# The commit message asks the build services to skip it, so the website is never rebuilt.
+# This is one layer of five (docs/OPERATIONS-PLAN.md section 3.1). The real alarm is the
+# Healthchecks.io monitor, which emails the owner if the keep-alive or the backup stops.
+#
+# Triggers: the monthly schedule only works once this file is on the default branch (main).
+# The push trigger lets it be tested from phase-2 and is removed when the file moves to main.
+
+name: Heartbeat
+
+on:
+  schedule:
+    - cron: "11 5 1 * *"
+  workflow_dispatch:
+  push:
+    branches: [phase-2]
+    paths:
+      - ".github/workflows/heartbeat.yml"
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  beat:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Write one line to the ops-heartbeat branch
+        run: |
+          set -euo pipefail
+          git checkout --orphan ops-heartbeat
+          git rm -rf --quiet . || true
+          date -u +"Heartbeat %Y-%m-%d %H:%M UTC" > HEARTBEAT.txt
+          git add HEARTBEAT.txt
+          git -c user.name="RSF heartbeat" -c user.email="heartbeat@users.noreply.github.com" \
+            commit --quiet -m "Monthly heartbeat [skip ci] [ci skip] [vercel skip]"
+          git push --force origin ops-heartbeat
+          echo "Heartbeat written."
+
+      - name: Ask GitHub to keep the schedules switched on
+        if: success() && github.ref == 'refs/heads/main'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow enable heartbeat.yml --repo "${GITHUB_REPOSITORY}"
+          gh workflow enable keep-alive.yml --repo "${GITHUB_REPOSITORY}"
+          gh workflow enable backup.yml --repo "${GITHUB_REPOSITORY}"
