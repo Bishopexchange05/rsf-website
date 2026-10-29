@@ -6,9 +6,7 @@
 # about 26 hours, that service emails the owner (this is what catches a silently stopped schedule).
 # See docs/OPERATIONS-PLAN.md section 3.1.
 #
-# Triggers: the daily schedule and "Run workflow" only work once this file is on the default
-# branch (main). The push trigger below lets the same file be tested from phase-2 and is removed
-# when the file moves to main.
+# Triggers: the schedule below, and the "Run workflow" button in the Actions tab.
 
 name: Keep-alive
 
@@ -16,10 +14,6 @@ on:
   schedule:
     - cron: "17 4 * * *"
   workflow_dispatch:
-  push:
-    branches: [phase-2]
-    paths:
-      - ".github/workflows/keep-alive.yml"
 
 permissions:
   actions: write

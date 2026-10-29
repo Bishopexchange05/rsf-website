@@ -1,9 +1,7 @@
 # Nightly encrypted backup of the DEVELOPMENT database (see docs/OPERATIONS-PLAN.md section 4 and
 # docs/RESTORE.md). The work is in ops/backup.sh. This file only sets it up and tells the monitor.
 #
-# Triggers: the nightly schedule and "Run workflow" only work once this file is on the default
-# branch (main). The push trigger below lets it be tested from phase-2 and is removed when the
-# file moves to main.
+# Triggers: the schedule below, and the "Run workflow" button in the Actions tab.
 
 name: Backup
 
@@ -11,11 +9,6 @@ on:
   schedule:
     - cron: "43 2 * * *"
   workflow_dispatch:
-  push:
-    branches: [phase-2]
-    paths:
-      - ".github/workflows/backup.yml"
-      - "ops/backup.sh"
 
 permissions:
   actions: write

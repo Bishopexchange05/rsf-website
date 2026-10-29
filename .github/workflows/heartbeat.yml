@@ -4,8 +4,7 @@
 # This is one layer of five (docs/OPERATIONS-PLAN.md section 3.1). The real alarm is the
 # Healthchecks.io monitor, which emails the owner if the keep-alive or the backup stops.
 #
-# Triggers: the monthly schedule only works once this file is on the default branch (main).
-# The push trigger lets it be tested from phase-2 and is removed when the file moves to main.
+# Triggers: the schedule below, and the "Run workflow" button in the Actions tab.
 
 name: Heartbeat
 
@@ -13,10 +12,6 @@ on:
   schedule:
     - cron: "11 5 1 * *"
   workflow_dispatch:
-  push:
-    branches: [phase-2]
-    paths:
-      - ".github/workflows/heartbeat.yml"
 
 permissions:
   contents: write
