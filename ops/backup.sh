@@ -25,6 +25,21 @@ for v in SRC_DB_URL SCRATCH_DB_URL GPG_PUBLIC_KEY BACKUP_REPO BACKUP_REPO_TOKEN;
   fi
 done
 
+# This repository is public, so its logs are public. A failing command may mention the database
+# address or user name; those are hidden before anything is printed, and no secret is ever shown.
+HOST="$(printf '%s' "${SRC_DB_URL}" | sed -E 's#^[a-z]+://[^@]*@([^:/?]+).*#\1#')"
+DBUSER="$(printf '%s' "${SRC_DB_URL}" | sed -E 's#^[a-z]+://([^:@]+)[:@].*#\1#')"
+[ -n "${HOST}" ] || HOST="no-host-found"
+[ -n "${DBUSER}" ] || DBUSER="no-user-found"
+try() {
+  local what="$1"; shift
+  if ! "$@" 2> err.txt; then
+    echo "::error::FAILED: ${what}"
+    sed -e "s#${HOST}#[db-host]#g" -e "s#${DBUSER}#[db-user]#g" err.txt | head -6 | while IFS= read -r line; do echo "::error::${line}"; done
+    exit 1
+  fi
+}
+
 STAMP="$(date -u +%Y-%m-%d)"
 MONTH="$(date -u +%Y-%m)"
 WORK="$(mktemp -d)"
@@ -32,16 +47,18 @@ cd "${WORK}"
 
 # ---------------------------------------------------------------- 1. dump
 echo "::group::Dump"
-pg_dump "${SRC_DB_URL}" --format=custom --schema=public --schema=private \
+try "dump of the application data (public and private schemas)" \
+  pg_dump "${SRC_DB_URL}" --format=custom --schema=public --schema=private \
   --no-owner --no-privileges --file=public.dump
-pg_dump "${SRC_DB_URL}" --format=custom --data-only --no-owner \
+try "dump of the login accounts (auth users, identities, two-step factors)" \
+  pg_dump "${SRC_DB_URL}" --format=custom --data-only --no-owner \
   --table=auth.users --table=auth.identities --table=auth.mfa_factors --file=auth-data.dump
 ls -l public.dump auth-data.dump | awk '{print $5" bytes  "$9}'
 echo "::endgroup::"
 
 # ------------------------------------------- 2. prove the dump restores
 echo "::group::Restore test in a throwaway database"
-psql "${SCRATCH_DB_URL}" -v ON_ERROR_STOP=1 -q <<'SQL'
+try "set up the throwaway database" psql "${SCRATCH_DB_URL}" -v ON_ERROR_STOP=1 -q <<'SQL'
 create role anon nologin;
 create role authenticated nologin;
 create role service_role nologin;
@@ -55,9 +72,9 @@ SQL
 
 pg_restore --section=pre-data --no-owner --no-privileges -d "${SCRATCH_DB_URL}" public.dump 2> pre.err || true
 PGOPTIONS='-c session_replication_role=replica' \
-  pg_restore --section=data --no-owner -d "${SCRATCH_DB_URL}" public.dump 2> data.err
+  try "loading the data into the throwaway database" pg_restore --section=data --no-owner -d "${SCRATCH_DB_URL}" public.dump
 pg_restore --section=post-data --no-owner --no-privileges -d "${SCRATCH_DB_URL}" public.dump 2> post.err || true
-echo "Restore messages: before-data $(wc -l < pre.err) lines, data $(wc -l < data.err) lines, after-data $(wc -l < post.err) lines (some are expected: this scratch database has no Supabase roles)."
+echo "Restore messages: before-data $(wc -l < pre.err) lines, after-data $(wc -l < post.err) lines (some are expected: this scratch database has no Supabase roles)."
 
 tables="$(psql "${SRC_DB_URL}" -Atc "select schemaname||'.'||tablename from pg_tables where schemaname in ('public','private') order by 1")"
 bad=0
