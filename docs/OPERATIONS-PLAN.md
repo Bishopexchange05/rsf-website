@@ -1,7 +1,12 @@
 # Operations plan: plans and limits, keep-alive, backups, and a faster workflow
 
-Written 28 October 2026 on the `phase-2` branch. This is a plan plus the facts it rests on. Nothing in
-sections 3 to 6 has been built yet: the owner must do the setup steps in section 5 first.
+Written 28 October 2026 on the `phase-2` branch. Sections 1, 2 and 7 are facts and plans. **Status of
+sections 3 to 5 (29 October 2026):** the setup in section 5 is done (all seven GitHub secrets, the backup user,
+the encryption keys, the monitor). The keep-alive, the nightly backup and the monthly heartbeat are built
+(`.github/workflows/`, `ops/backup.sh`) and **tested from `phase-2`** by a push trigger: the keep-alive and
+the heartbeat passed, and the backup passed end to end (dump, restore test in a throwaway database,
+encryption, storage in the private repository, monitor ping). **The schedules are not switched on yet**: that
+needs a separate workflow-only change to `main` (section 6), which waits for the owner's approval.
 
 ## 1. What the free plans really allow (checked against the current documents)
 
