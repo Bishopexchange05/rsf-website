@@ -6,8 +6,8 @@ import { orgName, spaceName, spaceShort } from "./site";
 const heroText = `${orgName} is a charity that supports young people through education, career guidance and practical skills.`;
 
 export const meta = {
-  title: "About",
-  description: `${heroText} Learn why we started and what we look for in the young people we support.`,
+  title: "About our story and mission",
+  description: `${orgName} is a charity that helps young people through education, career guidance and practical skills. Read why we started.`,
 };
 
 // Placeholder images live in /public/media/. Replace with real photos using the

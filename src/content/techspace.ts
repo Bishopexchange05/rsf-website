@@ -37,7 +37,7 @@ export const media = {
 
 export const meta = {
   title: spaceName.replace(/ /g, " "),
-  description: `${spaceName} is where ${orgName}'s work happens in person: a calm place to work or study, learn digital skills, create content and get honest career guidance.`,
+  description: `${spaceName} is where our work happens in person: a calm place to work or study, learn digital skills and get honest career guidance.`,
 };
 
 export const hero = {

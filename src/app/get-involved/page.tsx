@@ -8,11 +8,9 @@ import { Reveal } from "@/components/Reveal";
 import { Section } from "@/components/Section";
 import { cards, hero, media, meta, notSure } from "@/content/get-involved";
 import { site } from "@/content/site";
+import { pageMeta } from "@/lib/page-meta";
 
-export const metadata: Metadata = {
-  title: meta.title,
-  description: meta.description,
-};
+export const metadata: Metadata = pageMeta({ path: "/get-involved", title: meta.title, description: meta.description });
 
 export default function GetInvolvedPage() {
   return (

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/Button";
@@ -12,9 +13,11 @@ import { TourVideo } from "@/components/TourVideo";
 import { VisionMission } from "@/components/VisionMission";
 import { WorkingTowards } from "@/components/WorkingTowards";
 import { addressStructured, site } from "@/content/site";
+import { pageMeta } from "@/lib/page-meta";
 import {
   closing,
   hero,
+  meta,
   media,
   pillars,
   pillarsSection,
@@ -41,12 +44,28 @@ const organizationJsonLd = {
   sameAs: site.socials.map((s) => s.href),
 };
 
+export const metadata: Metadata = pageMeta({ path: "/", title: meta.title, description: meta.description });
+
+// Tells search engines the site's name and address (no site search, so no search box data).
+const websiteJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  name: site.name,
+  alternateName: site.shortName,
+  url: site.url,
+  publisher: { "@type": "NGO", name: site.name, url: site.url },
+};
+
 export default function HomePage() {
   return (
     <>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }}
       />
       {/* Hero: background video (poster first) under a navy-to-purple overlay. */}
       <section className="relative isolate bg-navy pt-24 text-white dark:bg-dark-bg md:pt-28">

@@ -18,11 +18,9 @@ import {
   whatWeLookFor,
 } from "@/content/about";
 import { closing, media as homeMedia } from "@/content/home";
+import { pageMeta } from "@/lib/page-meta";
 
-export const metadata: Metadata = {
-  title: meta.title,
-  description: meta.description,
-};
+export const metadata: Metadata = pageMeta({ path: "/about", title: meta.title, description: meta.description });
 
 const blockImages = [
   homeMedia.pillars.education,

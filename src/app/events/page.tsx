@@ -22,11 +22,9 @@ import {
   whoShouldCome,
 } from "@/content/events";
 import { addressStructured, site } from "@/content/site";
+import { pageMeta } from "@/lib/page-meta";
 
-export const metadata: Metadata = {
-  title: meta.title,
-  description: meta.description,
-};
+export const metadata: Metadata = pageMeta({ path: "/events", title: meta.title, description: meta.description });
 
 const eventJsonLd = {
   "@context": "https://schema.org",

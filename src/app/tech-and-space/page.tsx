@@ -27,14 +27,26 @@ import {
   workspace,
 } from "@/content/techspace";
 import { media as homeMedia } from "@/content/home";
-import { site } from "@/content/site";
+import { addressStructured, site } from "@/content/site";
+import { pageMeta } from "@/lib/page-meta";
 
-export const metadata: Metadata = {
-  title: meta.title,
-  description: meta.description,
-};
+export const metadata: Metadata = pageMeta({ path: "/tech-and-space", title: meta.title, description: meta.description });
 
 const anchor = "scroll-mt-24";
+
+// The space as a place, for search engines. Only public facts from /content/site.ts: no opening hours or
+// prices (hours live in the database, prices are not public), and never the overnight address.
+const placeJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "LocalBusiness",
+  name: "RSF Tech & Space",
+  url: `${site.url}/tech-and-space`,
+  description: meta.description,
+  telephone: site.phoneE164,
+  image: `${site.url}${site.logo}`,
+  address: { "@type": "PostalAddress", ...addressStructured },
+  parentOrganization: { "@type": "NGO", name: site.name, url: site.url },
+};
 
 export default async function TechSpacePage() {
   // When booking is open on the site, the day and overnight buttons lead to the account booking
@@ -44,6 +56,7 @@ export default async function TechSpacePage() {
   const overnightOn = pub?.overnight_open === true;
   return (
     <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(placeJsonLd) }} />
       <PageHero
         id="hero"
         label={hero.label}

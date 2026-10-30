@@ -23,7 +23,7 @@ export const event = {
 
 export const meta = {
   title: "Events",
-  description: `Join us as we open ${spaceName.replace(/ /g, " ")}, a place for young people to work, learn and be guided.`,
+  description: `Join us as we open ${spaceName.replace(/ /g, " ")}, a place for young people to work, learn and be guided. See the date, the place and how to come.`,
 };
 
 export const media = {

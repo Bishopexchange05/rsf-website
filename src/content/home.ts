@@ -2,7 +2,7 @@ import { orgName, spaceName, spaceShort } from "./site";
 
 export const meta = {
   title: "Helping people become who they want to be",
-  description: `${orgName} supports young people through education, career guidance and practical skills, so that talent never goes to waste for lack of opportunity or direction.`,
+  description: `${orgName} supports young people through education, career guidance and practical skills, so talent never goes to waste for lack of opportunity.`,
 };
 
 // Media slots. Files live in /public/media/. Real photos and the tour video are

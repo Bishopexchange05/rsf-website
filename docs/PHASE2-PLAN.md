@@ -776,3 +776,13 @@ owner's request (migration 0014, daily job route `/api/cron/daily`, `vercel.json
 Group 2 test run 31 October 2026 (migration 0015 run on DEV): `supabase/tests/group2.js` 22 of 22 passed (who is due, no
 repeats, retry queue and purge, the daily route with and without the secret, backup check reports "not set up" locally).
 Not tested: a real email failure feeding the retry queue, and the real Healthchecks call (needs the key).
+
+**Group 2 approved by the owner (31 October 2026).** Group 3 (search and sharing) started.
+
+**Group 3 status (31 October 2026):** built and checked on production builds (accounts off and on). Every public page now has
+its own canonical address and its own link-preview title, description and address (`src/lib/page-meta.ts`); descriptions
+tidied (all 111 to 160 characters); WebSite data on the home page and LocalBusiness data (name, address, phone, no hours,
+no prices, never the overnight address) on Tech & Space; the sitemap carries fixed dates (2026-10-16, to be changed by hand
+when a page really changes); the five sign-in pages are no longer blocked in `robots.txt` and still say `noindex`. With
+accounts off they return a true 404. Not measured: how Google actually shows the pages (needs the live site and time),
+and the structured data was not run through Google's Rich Results test (needs the live address).

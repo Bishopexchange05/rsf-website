@@ -146,7 +146,7 @@ export const privacy: LegalPageData = {
 export const terms: LegalPageData = {
   slug: "terms",
   title: "Terms of Service",
-  description: `The terms for using the ${orgName} website.`,
+  description: `The terms for using the ${orgName} website: what you can expect from us and what we ask of you.`,
   heroText: "The terms for using this website.",
   lastUpdated: LAST_UPDATED,
   blocks: [
