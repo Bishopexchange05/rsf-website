@@ -7,6 +7,18 @@ import {
   site,
   spaceName,
 } from "./site";
+import {
+  ACCOUNTS_ON,
+  dataProtectionExtra,
+  draftNotice,
+  privacyAccounts,
+  privacyLoginCookie,
+  privacyNoSensitive,
+  safeguardingYoung,
+  termsBooking,
+  termsDisputes,
+  termsRequestsAndFees,
+} from "./legal-defaults";
 
 // Legal page text, from docs/RSF-Legal-Pages-Draft.md. The wording is the
 // owner's draft: change it there first, not here. Inline markup in strings:
@@ -55,6 +67,7 @@ export const privacy: LegalPageData = {
   heroText: "What we collect through this website, why, and what your rights are.",
   lastUpdated: LAST_UPDATED,
   blocks: [
+    ...(ACCOUNTS_ON ? [draftNotice] : []),
     p(
       `${orgName} ("we", "us") is a charity that supports young people through education, career guidance and practical skills. This policy explains what personal information we collect through this website, why, and what your rights are. We follow the Nigeria Data Protection Act 2023.`,
     ),
@@ -72,7 +85,9 @@ export const privacy: LegalPageData = {
       "**Overnight workspace requests**: your name, phone number and preferred time to visit our office. We do not collect identification documents through this website. Identity checks, where needed, happen in person at our office.",
     ),
     p(
-      "We do not ask for passwords, payment card details or sensitive information through this website. Please do not send any in your messages.",
+      ACCOUNTS_ON
+        ? privacyNoSensitive
+        : "We do not ask for passwords, payment card details or sensitive information through this website. Please do not send any in your messages.",
     ),
     h2("Why we use it, and our legal basis"),
     ul(
@@ -99,11 +114,12 @@ export const privacy: LegalPageData = {
     p(
       "We keep a request for up to 12 months after we have dealt with it, then delete it, unless the law or a safeguarding concern requires us to keep it longer.",
     ),
+    ...(ACCOUNTS_ON ? privacyAccounts : []),
     h2("Cookies and similar technologies"),
     p("This website uses only what it needs to work:"),
     ul(
       "A small stored setting that remembers your light or dark display choice.",
-      "A small stored setting that remembers if you closed an announcement bar.",
+      ...(ACCOUNTS_ON ? [privacyLoginCookie] : []),
     ),
     p(
       "We do not use advertising or tracking cookies. If we add website analytics in future, we will update this policy and ask for your consent where the law requires it.",
@@ -134,6 +150,7 @@ export const terms: LegalPageData = {
   heroText: "The terms for using this website.",
   lastUpdated: LAST_UPDATED,
   blocks: [
+    ...(ACCOUNTS_ON ? [draftNotice] : []),
     p("By using this website you agree to these terms. If you do not agree, please do not use it."),
     h2("About us"),
     p(
@@ -143,22 +160,29 @@ export const terms: LegalPageData = {
     p(
       "You may use this website for lawful, personal and non-commercial purposes. Please do not try to disrupt it, send false or harmful content through its forms, or use automated tools to submit forms.",
     ),
-    h2("Requests are not bookings"),
-    p(
-      "Sending a request form is not a confirmed booking, registration or place on a course. We will contact you to confirm. Workspace, media room and overnight access depend on availability. Overnight access is approved in person at our office.",
-    ),
+    ...(ACCOUNTS_ON
+      ? termsRequestsAndFees
+      : [
+          h2("Requests are not bookings"),
+          p(
+            "Sending a request form is not a confirmed booking, registration or place on a course. We will contact you to confirm. Workspace, media room and overnight access depend on availability. Overnight access is approved in person at our office.",
+          ),
+        ]),
     h2("Guidance and support"),
     p(
       "Our career, school and course guidance, scholarship information, study-abroad information and visa guidance are given to help you make your own decisions. We do not guarantee any admission, scholarship, visa, job or other outcome. You are responsible for your own decisions and applications.",
     ),
-    h2("Fees"),
-    p(
-      "This website does not take payments. If a service has a fee, we will tell you the fee before you commit to it.",
-    ),
+    ...(ACCOUNTS_ON
+      ? []
+      : [
+          h2("Fees"),
+          p("This website does not take payments. If a service has a fee, we will tell you the fee before you commit to it."),
+        ]),
     h2("Events"),
     p(
       "Attendance at our events is free unless we say otherwise. We may take photographs and video at events for our work and our social media. If you do not want to appear in them, tell a member of our team at the event. We will take extra care with young people. See our [Safeguarding Policy](/safeguarding).",
     ),
+    ...(ACCOUNTS_ON ? termsBooking : []),
     h2("Our content"),
     p(
       `The text, logo, photographs and design of this website belong to ${orgName} or are used with permission. You may share links to our pages. Please do not copy or reuse our content, or our name and logo, without our written permission. Course materials, when offered, are for the enrolled learner's own use and may not be redistributed.`,
@@ -177,6 +201,7 @@ export const terms: LegalPageData = {
     ),
     h2("Governing law"),
     p("These terms are governed by the laws of the Federal Republic of Nigeria."),
+    ...(ACCOUNTS_ON ? termsDisputes : []),
     h2("Contact"),
     p(hasEmail ? `${emailLink} · ${PHONE}` : `${PHONE} · ${contactPage}`),
   ],
@@ -191,6 +216,7 @@ export const safeguarding: LegalPageData = {
   heroText: "How we keep children and young people safe.",
   lastUpdated: LAST_UPDATED,
   blocks: [
+    ...(ACCOUNTS_ON ? [draftNotice] : []),
     h2("Our commitment"),
     p(
       `${orgName} works with children and young people. Everyone we work with has the right to be safe, respected and protected from harm, abuse and exploitation. Safeguarding is the responsibility of everyone who works or volunteers with us.`,
@@ -215,6 +241,7 @@ export const safeguarding: LegalPageData = {
       `**Online safety.** Staff and volunteers use only official ${orgName} accounts to contact young people about our programmes, and do not share young people's private details. Requests made on our website are handled only by authorised team members.`,
       "**Information.** Information about young people is kept private and only as long as needed. See our [Privacy Policy](/privacy).",
     ),
+    ...(ACCOUNTS_ON ? safeguardingYoung : []),
     h2("If you are worried about someone"),
     p(
       `Tell us straight away. You can contact ${SAFEGUARDING_CONTACT_LABEL} ${
@@ -248,6 +275,7 @@ export const dataProtection: LegalPageData = {
   heroText: "How we handle personal information, and your rights.",
   lastUpdated: LAST_UPDATED,
   blocks: [
+    ...(ACCOUNTS_ON ? [draftNotice] : []),
     p(
       `${orgName} respects your privacy and handles personal information in line with the Nigeria Data Protection Act 2023.`,
     ),
@@ -268,6 +296,7 @@ export const dataProtection: LegalPageData = {
           : `Contact us through our ${contactPage} or on ${PHONE}`
       } and we will respond as soon as we can.`,
     ),
+    ...(ACCOUNTS_ON ? dataProtectionExtra : []),
     h2("Complaints"),
     p(
       "If you are not satisfied, contact us first. You also have the right to complain to the Nigeria Data Protection Commission (NDPC).",

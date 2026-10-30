@@ -4,6 +4,8 @@
 online booking opens to the public. Nothing in this pack is legal advice; it is the Foundation's current
 text plus drafts of what the new booking features need.
 
+**Update, 30 October 2026.** At the lawyer's request, defaults were set for everything left blank in Parts B and C. They are all in one file, **`docs/LEGAL-DEFAULTS.md`**, with a plain note of what each one is and why, a list of the ones that most need a lawyer's eyes, and a default answer to each of the ten questions below. The lawyer-review mark on the website has not been pressed.
+
 **How to use this pack.** Part A says what changed with the booking system. Part B lists the questions
 we need answered. Part C is the proposed new booking wording (drafts, not yet on the website). Part D
 is the exact text that is on the website today (Privacy Policy, Terms of Service, Safeguarding Policy and
@@ -133,11 +135,11 @@ lawyer. The existing Safeguarding Policy below applies.]
 
 ---
 
-## Part D. Text that is on the website today
+## Part D. Text that is on the website (draft, with the booking system switched on)
 
-The four pages below are exactly what visitors see now. They were written before the booking system,
-so they do not yet mention accounts, bookings, payments, the second login step, the login cookie or
-Supabase and Google as processors. Part C is intended to fill that gap.
+The four pages below are what visitors see **when accounts are switched on**, generated from the website's own content file so it
+cannot drift. Sections marked "(draft wording)" are the defaults described in `docs/LEGAL-DEFAULTS.md`. While accounts
+are off, the live pages keep their original text.
 
 
 ---
@@ -145,11 +147,13 @@ Supabase and Google as processors. Part C is intended to fill that gap.
 # Privacy Policy
 
 *Page address:* /privacy  
-*Last updated shown on the page:* 13 October 2026
+*Last updated shown on the page:* 30 October 2026
 
 *Page summary:* How Rafael Support Foundation collects, uses and protects personal information through this website, and your rights.
 
 > What we collect through this website, why, and what your rights are.
+
+**Draft wording.** Sections marked "(draft wording)" are working text that has not yet had a final review by our lawyer. They are plain-language defaults, not legal advice, and they may change.
 
 Rafael Support Foundation ("we", "us") is a charity that supports young people through education, career guidance and practical skills. This policy explains what personal information we collect through this website, why, and what your rights are. We follow the Nigeria Data Protection Act 2023.
 
@@ -165,7 +169,7 @@ We only collect what you choose to send us through our forms:
 - **Event registration**: your name, phone number, whether you are a student, parent, young professional or other, and the number of guests.
 - **Overnight workspace requests**: your name, phone number and preferred time to visit our office. We do not collect identification documents through this website. Identity checks, where needed, happen in person at our office.
 
-We do not ask for passwords, payment card details or sensitive information through this website. Please do not send any in your messages.
+We never ask for payment card details or identity documents through this website. Your account password is used only to sign you in. Please do not send sensitive information in your messages.
 
 ## Why we use it, and our legal basis
 
@@ -193,12 +197,57 @@ These providers process information for us and may store it outside Nigeria. We 
 
 We keep a request for up to 12 months after we have dealt with it, then delete it, unless the law or a safeguarding concern requires us to keep it longer.
 
+## Accounts and bookings (draft wording)
+
+If you create an account or book a desk, we also collect:
+
+- **Your account:** your name, phone number, email address and a password (kept only in scrambled form, so we cannot read it). The time you accepted our Terms and Privacy Policy. Whether you say you are a student.
+- **Your bookings:** what you booked, when, the price, your booking reference and its status (held, paid, confirmed, cancelled, refunded). For an overnight request, that you confirmed you are 18 or over, and the time you did.
+- **Payments:** we do not take or keep card details. If you tell us a transfer reference or the name on the account you paid from, we keep it with the booking. We record the amount that reached our bank account and which team member confirmed it. If we owe you a refund, we collect your bank account details by phone or WhatsApp to pay it, and we do not store them on this website.
+- **What our team does:** a record of what team members do with bookings, payments and settings (who, when and what), so the service stays accountable and secure.
+- **Emails:** a log that an email was sent to your account (the type of email and whether it was sent), not its text.
+- **Identity documents:** we never collect, upload, scan or store an identity document on this website. Overnight and student checks are done by looking at the document in person.
+
+## Why we use it, accounts and bookings (draft wording)
+
+- To create your account, take your booking, check your payment and look after you when you visit. Basis: taking steps at your request and carrying out the booking.
+- To keep accounting records of money received and refunded. Basis: our legal duty to keep financial records.
+- To keep the service secure, prevent fraud and spam, and keep our team accountable (the record of team actions and the email log). Basis: our legitimate interest in running a secure and trustworthy service.
+- To email you about your account and bookings, such as verification, payment and reminders. Basis: carrying out the booking and our legitimate interest. We do not send marketing emails unless you ask for them.
+- To keep people safe, including checking in person that overnight guests are adults. Basis: our legitimate interest and our duty of care.
+
+## Who receives your information, accounts and bookings (draft wording)
+
+- **Supabase:** our database and sign-in service. It stores account and booking information.
+- **Vercel:** hosts the website.
+- **Google (Gmail):** sends our emails until we send them from our own domain.
+- **Resend:** delivers our emails once we send them from our own domain.
+- **Our team:** authorised team members see the details they need to run bookings, such as your name, phone number and booking. Staff and administrators sign in with a second step (an authenticator app).
+
+These providers may store and process information outside Nigeria. We share only what is needed, and we use providers that protect information. We do not sell your information.
+
+## How long we keep it, accounts and bookings (draft wording)
+
+- Account and booking details: while your account is active and for 12 months after your last activity. Then your name, phone number and email are removed from old bookings (they are anonymised), and only figures remain.
+- The email log: 12 months.
+- Accounting records of amounts, dates and references: 6 years, because we must keep financial records.
+- The record of team actions: 6 years.
+- We may keep something longer where the law or a safeguarding concern requires it.
+
+## Under 18 and accounts (draft wording)
+
+Accounts are for people aged 18 and over. If you are under 18, please ask a parent or guardian to book for you. See our [Safeguarding Policy](/safeguarding).
+
+## Your information: ask us (draft wording)
+
+You can ask us at any time for a copy of your information, to correct it, or to delete your account (+234 708 196 5663, or through our [Contact page](/contact)). We reply within 30 days. When your account is deleted your sign-in is removed and your bookings are anonymised. We keep accounting figures (amounts, dates, references) because the law requires financial records.
+
 ## Cookies and similar technologies
 
 This website uses only what it needs to work:
 
 - A small stored setting that remembers your light or dark display choice.
-- A small stored setting that remembers if you closed an announcement bar.
+- A sign-in cookie, set only when you log in, that keeps you signed in. It is needed for your account to work.
 
 We do not use advertising or tracking cookies. If we add website analytics in future, we will update this policy and ask for your consent where the law requires it.
 
@@ -220,11 +269,13 @@ We will update this page when our practices change and show the date at the top.
 # Terms of Service
 
 *Page address:* /terms  
-*Last updated shown on the page:* 13 October 2026
+*Last updated shown on the page:* 30 October 2026
 
 *Page summary:* The terms for using the Rafael Support Foundation website.
 
 > The terms for using this website.
+
+**Draft wording.** Sections marked "(draft wording)" are working text that has not yet had a final review by our lawyer. They are plain-language defaults, not legal advice, and they may change.
 
 By using this website you agree to these terms. If you do not agree, please do not use it.
 
@@ -236,21 +287,89 @@ This website is run by Rafael Support Foundation, a charity based at Dreamlink C
 
 You may use this website for lawful, personal and non-commercial purposes. Please do not try to disrupt it, send false or harmful content through its forms, or use automated tools to submit forms.
 
-## Requests are not bookings
+## Requests and bookings
 
-Sending a request form is not a confirmed booking, registration or place on a course. We will contact you to confirm. Workspace, media room and overnight access depend on availability. Overnight access is approved in person at our office.
+Sending a request form is not a confirmed booking, registration or place on a course. We will contact you to confirm. A desk booked through your account is confirmed only when our team has checked your payment (see "Booking and paying" below). Media room, course and consulting requests depend on availability.
+
+## Fees
+
+This website does not take card payments. Workspace bookings are paid by bank transfer, as explained below. If any other service has a fee, we will tell you the fee before you commit to it.
 
 ## Guidance and support
 
 Our career, school and course guidance, scholarship information, study-abroad information and visa guidance are given to help you make your own decisions. We do not guarantee any admission, scholarship, visa, job or other outcome. You are responsible for your own decisions and applications.
 
-## Fees
-
-This website does not take payments. If a service has a fee, we will tell you the fee before you commit to it.
-
 ## Events
 
 Attendance at our events is free unless we say otherwise. We may take photographs and video at events for our work and our social media. If you do not want to appear in them, tell a member of our team at the event. We will take extra care with young people. See our [Safeguarding Policy](/safeguarding).
+
+## Accounts (draft wording)
+
+You need an account to book a desk. By creating one you confirm that you are 18 or over, that the details you give are true, and that you accept these Terms and our [Privacy Policy](/privacy). Keep your password private: you are responsible for what is done with your account. We may suspend or close an account that is used to abuse the service, harass others or make false bookings. You can ask us to delete your account at any time.
+
+If you are under 18, please ask a parent or guardian to make the booking for you. See our [Safeguarding Policy](/safeguarding).
+
+## Booking and paying (draft wording)
+
+- When you book, we hold your desk for 2 hours. If you have not paid by then, the hold ends and the desk is released. For an overnight request that we have approved, the hold is 24 hours.
+- You pay by **bank transfer only**, to the account shown on your booking page, using your booking reference as the transfer description. We do not take card payments and we never ask for card details.
+- After you transfer, press "I've paid". Your booking is **confirmed only when our team has checked that the payment reached our bank account**. This can take some time. We will email you.
+- If a payment does not match (wrong amount, or no matching transfer) we may not confirm it, and we will tell you why. If your money reached us but your desk is no longer free, we will refund it in full.
+- The price is shown on the booking page before you book, and that is the price you pay for that booking.
+
+## Student prices (draft wording)
+
+A student price is for people who are students. Bring a valid student ID: our team checks it in person when you arrive. We do not take or keep a copy. If you cannot show it, you may be asked to pay the difference before you stay, or we may decline entry for that booking.
+
+## Cancellations and refunds (draft wording)
+
+- **Unpaid bookings:** you can cancel at any time. Nothing is owed.
+- **Paid hourly, half-day, day and overnight bookings:** you can cancel online up to 24 hours before the start time and receive a full refund. After that, no refund is due unless we agree otherwise.
+- **Monthly passes:** you can cancel online up to 48 hours before the start date and receive a full refund. Once a pass has started there is no automatic refund. In a genuine case our team may agree a partial refund, at its own discretion.
+- **If we cancel** (for example because we must close), you receive a full refund, or we move your booking to a time that suits you. If we close unexpectedly during a monthly pass, we may extend the pass by the days we were closed.
+- **If you do not come,** the booking is marked as not attended and no refund is due.
+- **How refunds are paid:** by bank transfer, within 7 working days after the cancellation is accepted, to a bank account in the name of the person who booked. We will ask for the account details by phone or WhatsApp. **We never ask you to enter bank details on this website.** We do not refund bank charges on your side.
+
+## Monthly desk pass (draft wording)
+
+- A monthly pass gives you one desk for 30 calendar days in a row from your start date. Sundays and other closed days still count towards the 30 days.
+- It is a desk, not a named desk. Sit at any free desk when you arrive. Our team finds your pass by your name or booking reference.
+- A pass is personal. It cannot be shared, sold, transferred or paused.
+- If we confirm your payment after your chosen start date, your pass starts on the day we confirm it and keeps its full length.
+- You can renew before a pass ends. A renewal is not guaranteed unless it is booked and paid before someone else takes the place.
+
+## Overnight desk (draft wording)
+
+- The overnight desk is for people aged **18 or over only**. You must tick a box to confirm this when you request it.
+- Every overnight request is approved **in person** at our office first, where our team looks at your identity document. **We never ask you to upload an ID document to this website, and we do not scan, copy or keep it.**
+- A request holds a desk for 3 days. If we have not met you in that time, the request ends and the desk is released.
+- After we approve your request and your payment is confirmed, we show you the address and the house rules in your account and by email. Please keep the address to yourself.
+- Check-in and check-out times are shown on your booking. Late arrival or late departure needs our agreement.
+- We may refuse, end or cancel an overnight stay straight away if the house rules are broken or if it is not safe. In that case no refund is due for the part of the stay not used, unless we decide otherwise.
+
+## House rules for our spaces (draft wording)
+
+These apply to everyone at RSF Tech & Space, by day and by night:
+
+- Treat everyone with respect. No harassment, bullying, discrimination or threatening behaviour.
+- No illegal activity, no weapons, no alcohol, no illegal drugs, and no smoking or vaping inside.
+- Keep noise low and use headphones for audio and video.
+- Look after the equipment, furniture and building. You are responsible for damage you cause.
+- Keep your belongings with you and secure.
+- Use electricity, WiFi and printers fairly. We may limit use that affects others.
+- Visitors are welcome in the day space only if they are also booked or we agree. No visitors overnight.
+- Follow the instructions of our team, including in an emergency. Know where the exits are.
+- Our team may ask anyone who breaks these rules to leave.
+
+## Our responsibility to you (draft wording)
+
+We provide RSF Tech & Space as part of our charity work and take reasonable care to keep it safe, clean and available. However:
+
+- Nothing in these terms limits our responsibility for death or personal injury caused by our negligence, for fraud, or for anything else the law does not allow us to limit.
+- You use the space, equipment and WiFi at your own risk. We do not promise that power, internet or any equipment will always be available.
+- We are not responsible for lost, stolen or damaged belongings, or for lost work or data.
+- Apart from the points above, our total responsibility to you for any one booking is limited to the amount you paid for that booking.
+- We are not responsible for losses we could not reasonably have foreseen.
 
 ## Our content
 
@@ -272,6 +391,10 @@ We may update these terms and will show the date at the top. Continued use of th
 
 These terms are governed by the laws of the Federal Republic of Nigeria.
 
+## Disputes (draft wording)
+
+If you have a complaint about a booking, contact us first (+234 708 196 5663, or through our [Contact page](/contact)). We will try to settle it within 30 days. If it cannot be settled, the courts of Ebonyi State, Nigeria can decide it, under the laws of the Federal Republic of Nigeria.
+
 ## Contact
 
 +234 708 196 5663 · [Contact page](/contact)
@@ -282,11 +405,13 @@ These terms are governed by the laws of the Federal Republic of Nigeria.
 # Safeguarding Policy
 
 *Page address:* /safeguarding  
-*Last updated shown on the page:* 13 October 2026
+*Last updated shown on the page:* 30 October 2026
 
 *Page summary:* How Rafael Support Foundation keeps children and young people safe, and what to do if you are worried about someone.
 
 > How we keep children and young people safe.
+
+**Draft wording.** Sections marked "(draft wording)" are working text that has not yet had a final review by our lawyer. They are plain-language defaults, not legal advice, and they may change.
 
 ## Our commitment
 
@@ -312,6 +437,16 @@ This policy applies to all trustees, staff, volunteers, trainers, campus represe
 - **Online safety.** Staff and volunteers use only official Rafael Support Foundation accounts to contact young people about our programmes, and do not share young people's private details. Requests made on our website are handled only by authorised team members.
 - **Information.** Information about young people is kept private and only as long as needed. See our [Privacy Policy](/privacy).
 
+## Young people and the booking system (draft wording)
+
+- Online accounts and bookings are for people aged 18 or over. A young person under 18 can use the day workspace when a parent or guardian has booked for them, or knows and agrees that they are coming. We may ask to confirm this.
+- The overnight desk is for adults aged 18 and over only. We check this in person, and nobody under 18 stays overnight.
+- We do not leave a young person alone in a private space with one adult. Our team follows the code of conduct above in the workspace.
+- Adults who use the day space are not responsible for supervising other people's children, and must not be left to do so.
+- We do not publish photographs or video of anyone under 18 without a parent's or guardian's written permission, and never with their full name, school or address.
+- If you are worried about a young person in our space, tell our team or our safeguarding contact straight away.
+- We may refuse entry or end a booking where we believe a young person's safety is at risk.
+
 ## If you are worried about someone
 
 Tell us straight away. You can contact our safeguarding contact at +234 708 196 5663, or through our [Contact page](/contact). If a child is in immediate danger, contact the police or emergency services first.
@@ -336,11 +471,13 @@ We review this policy every year, and after any serious concern.
 # Data Protection Statement
 
 *Page address:* /data-protection  
-*Last updated shown on the page:* 13 October 2026
+*Last updated shown on the page:* 30 October 2026
 
 *Page summary:* How Rafael Support Foundation handles personal information under the Nigeria Data Protection Act 2023, and your rights.
 
 > How we handle personal information, and your rights.
+
+**Draft wording.** Sections marked "(draft wording)" are working text that has not yet had a final review by our lawyer. They are plain-language defaults, not legal advice, and they may change.
 
 Rafael Support Foundation respects your privacy and handles personal information in line with the Nigeria Data Protection Act 2023.
 
@@ -356,6 +493,26 @@ Rafael Support Foundation respects your privacy and handles personal information
 ## Your rights
 
 You can ask to see, correct or delete your information, object to its use, or withdraw your consent. Contact us through our [Contact page](/contact) or on +234 708 196 5663 and we will respond as soon as we can.
+
+## Who is responsible (draft wording)
+
+Rafael Support Foundation decides how the personal information described in our [Privacy Policy](/privacy) is used (the "data controller"). For data protection questions contact +234 708 196 5663, or through our [Contact page](/contact).
+
+## How quickly we reply (draft wording)
+
+We reply to a request about your information within 30 days.
+
+## If something goes wrong (draft wording)
+
+If there is a breach of personal information that could harm people, we will tell the Nigeria Data Protection Commission within 72 hours of becoming aware of it where the law requires, and we will tell the people affected if they are at risk.
+
+## Our team and security (draft wording)
+
+Only authorised team members can see booking and contact details. Staff and administrators sign in with a second step, and what they do with bookings, payments and settings is recorded.
+
+## Registration and our duties (draft wording)
+
+We keep our practices under review. We will register with the Nigeria Data Protection Commission, appoint the person the law requires and meet any other duty the Act places on us when it applies to us.
 
 ## Complaints
 

@@ -34,7 +34,7 @@ export const addressStructured = {
 export const CONTACT_EMAIL = (process.env.NEXT_PUBLIC_CONTACT_EMAIL ?? "").trim();
 
 // Date shown on the legal pages.
-export const LAST_UPDATED = "13 October 2026";
+export const LAST_UPDATED = "30 October 2026";
 
 // How the legal pages refer to the person who handles safeguarding concerns.
 // Change this one line when a named person is appointed.
