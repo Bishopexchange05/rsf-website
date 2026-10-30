@@ -1,5 +1,5 @@
-# Keep-alive: once a day, ask the DEVELOPMENT database one small question so Supabase never sees
-# the free project as inactive (it pauses free projects after 7 days of low activity).
+# Keep-alive: twice a day (04:17 and 16:47 UTC, so one late or dropped scheduled run does not matter),
+# ask the DEVELOPMENT database one small question so Supabase never sees the free project as inactive (it pauses free projects after 7 days of low activity).
 #
 # It uses only the project's publishable key, through a public database function. It sends no
 # data and prints no keys. On success it pings the Healthchecks.io monitor; if no ping arrives for
@@ -13,6 +13,7 @@ name: Keep-alive
 on:
   schedule:
     - cron: "17 4 * * *"
+    - cron: "47 16 * * *"
   workflow_dispatch:
 
 permissions:

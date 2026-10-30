@@ -11,6 +11,7 @@ name: Heartbeat
 on:
   schedule:
     - cron: "11 5 1 * *"
+    - cron: "11 5 15 * *"
   workflow_dispatch:
 
 permissions:
