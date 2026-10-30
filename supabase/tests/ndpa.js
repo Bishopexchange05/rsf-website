@@ -183,8 +183,8 @@ const iso = (offsetDays) => new Date(Date.now() + offsetDays * DAY).toISOString(
     const r4Old = await addBooking(R4.id, { status: "confirmed", starts: old, ends: oldEnd, updated: old, payRef: "R4 typed note" });
     await admin.from("bookings").update({ user_id: null }).eq("id", r1New.id);
     await admin.from("email_log").insert([
-      { to_user_id: null, template: "ndpa-test-old", status: "sent", created_at: iso(-400) },
-      { to_user_id: null, template: "ndpa-test-new", status: "sent", created_at: iso(-5) },
+      { to_user_id: null, template: `ndpa-test-old-${rateKey}`, status: "sent", created_at: iso(-400) },
+      { to_user_id: null, template: `ndpa-test-new-${rateKey}`, status: "sent", created_at: iso(-5) },
     ]);
     const oldAuditId = (await admin.from("audit_log").insert({ action: "ndpa.test.old", entity_type: "system", entity_id: "ndpa", created_at: iso(-500) }).select("id").single()).data.id;
     await admin.from("rate_events").insert([{ key: rateKey, action: "ndpa-test", created_at: iso(-10) }, { key: rateKey, action: "ndpa-test", created_at: new Date().toISOString() }]);
@@ -201,8 +201,8 @@ const iso = (offsetDays) => new Date(Date.now() + offsetDays * DAY).toISOString(
     check("5d: a booking with a refund still owed is NOT anonymised", g1r.user_id === R1.id && (await pay(r1Refund.id)) === "R1 refund note");
     const g3 = await get(r3Old.id);
     check("5e: a person who signed in recently keeps their history", g3.user_id === R3.id && (await pay(r3Old.id)) === "R3 note");
-    const mail = (await admin.from("email_log").select("template").in("template", ["ndpa-test-old", "ndpa-test-new"])).data ?? [];
-    check("5f: the email log is cleared after 12 months and kept before that", mail.length === 1 && mail[0].template === "ndpa-test-new", mail.map((m) => m.template).join(","));
+    const mail = (await admin.from("email_log").select("template").in("template", [`ndpa-test-old-${rateKey}`, `ndpa-test-new-${rateKey}`])).data ?? [];
+    check("5f: the email log is cleared after 12 months and kept before that", mail.length === 1 && mail[0].template === `ndpa-test-new-${rateKey}`, mail.map((m) => m.template).join(","));
     const auditKept = (await admin.from("audit_log").select("id").eq("id", oldAuditId)).data ?? [];
     check("5g: the audit log is never deleted", auditKept.length === 1);
     const rate = (await admin.from("rate_events").select("id").eq("key", rateKey)).data ?? [];

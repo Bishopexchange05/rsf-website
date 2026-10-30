@@ -746,3 +746,11 @@ no secrets in chat or git, no ID documents on the site, bank transfer only, laun
 5. **Group 5, launch readiness:** a full restore rehearsal plan, the pre-launch clean-up of test data, the
    production checklist (Supabase region, Vercel variables, retention job on the production database), and the
    final verification list.
+
+**Group 1 status (30 October 2026):** built and self-tested. Migrations 0013 and 0014 run on the development
+database. Automated tests: personal-data test 31 of 31 (`supabase/tests/ndpa.js`), dormant-account test 15 of 15
+(`supabase/tests/dormant.js`), launch checklist 11 of 11. Also checked in a real browser: the 18+ tick blocks
+registration, the account page shows Download and Delete, the download is a real file, a wrong password is
+refused, and a correct password deletes the account and anonymises the bookings. Waiting for the owner's
+approval of Group 1. Dormant accounts (24 months, with a warning email 30 days before) were added at the
+owner's request (migration 0014, daily job route `/api/cron/daily`, `vercel.json`).
