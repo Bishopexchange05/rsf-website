@@ -8,6 +8,9 @@ name: Backup
 on:
   schedule:
     - cron: "43 2 * * *"
+    # A second run later the same day, so one late or dropped run still leaves a backup for the day.
+    # It simply replaces that day's files with a newer copy.
+    - cron: "23 14 * * *"
   workflow_dispatch:
 
 permissions:
