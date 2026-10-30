@@ -2,6 +2,7 @@ import "server-only";
 import { dormantAccounts } from "@/content/accounts";
 import { site } from "@/content/site";
 import { sendLoggedEmail } from "@/lib/email/log";
+import { whoIs } from "@/lib/people";
 import { adminConfigured, createAdminClient } from "@/lib/supabase/admin";
 
 // Dormant accounts (NDPA: keep personal data no longer than needed). Run once a day by the daily job.
@@ -14,15 +15,6 @@ import { adminConfigured, createAdminClient } from "@/lib/supabase/admin";
 // the deleting, a few at a time (at most 50 a run).
 
 export type DormantResult = { warned: number; deleted: number; skipped: number; emailFailed: number };
-
-type Who = { email: string | null; name: string };
-
-async function whoIs(id: string): Promise<Who> {
-  const admin = createAdminClient();
-  const { data } = await admin.auth.admin.getUserById(id);
-  const { data: profile } = await admin.from("profiles").select("full_name").eq("id", id).maybeSingle();
-  return { email: data.user?.email ?? null, name: profile?.full_name ?? "there" };
-}
 
 export async function runDormantAccounts(): Promise<DormantResult> {
   const result: DormantResult = { warned: 0, deleted: 0, skipped: 0, emailFailed: 0 };
@@ -42,7 +34,7 @@ export async function runDormantAccounts(): Promise<DormantResult> {
     }
     const sent = await sendLoggedEmail(
       { to: who.email, subject: dormantAccounts.warning.subject, text: dormantAccounts.warning.body(who.name, loginUrl, `${site.url}/account`) },
-      { template: "dormant-warning", userId: row.user_id },
+      { template: "dormant-warning", userId: row.user_id, retry: false },
     );
     if (sent.ok) warnedIds.push(row.user_id);
     else result.emailFailed++;

@@ -754,3 +754,22 @@ registration, the account page shows Download and Delete, the download is a real
 refused, and a correct password deletes the account and anonymises the bookings. Waiting for the owner's
 approval of Group 1. Dormant accounts (24 months, with a warning email 30 days before) were added at the
 owner's request (migration 0014, daily job route `/api/cron/daily`, `vercel.json`).
+
+**Group 1 approved by the owner (31 October 2026).**
+
+**Group 2 status (31 October 2026):** built, waiting for migration 0015 and the automated test. What it does:
+- Reminder emails, sent by the daily job `/api/cron/daily`: the day before a confirmed day, half-day, hourly or
+  overnight booking; the day before a pass starts; 5 days before a pass ends (not if already renewed); and when a
+  payment hold ends within the next 45 minutes. The database (`reminders_due`, table `booking_reminders`) says who is
+  due and remembers who was reminded; a reminder is recorded only when the email really went.
+- **Limit of the free Vercel plan:** a cron job runs once a day, at some point inside the hour set. It is set to
+  16:00 UTC (17:00 to 17:59 Lagos), which suits the "day before, about 5 PM" reminders. The "hold ending in 30
+  minutes" reminder cannot be timed on a once-a-day job, so on Hobby it will rarely fire (the default hold is 2
+  hours). It works as soon as the job runs more often (Vercel Pro, every 15 minutes, a one-line change in `vercel.json`).
+- Failed-email retry: a failed email to a signed-in member is kept in a small queue (`email_retry`, subject and text
+  only, no address) and tried again by the daily job, 3 tries in all; deleted when sent, after the last try, after 3
+  days at most, and with the member's account.
+- Backup check: the daily job asks healthchecks.io (read-only key `HEALTHCHECKS_READ_KEY`) when the backup last
+  reported. If it is more than 36 hours ago (or never), every Admin gets one email, at most one a day.
+- Needs from the owner (Vercel environment, never in chat): `CRON_SECRET`, `HEALTHCHECKS_READ_KEY`. Vercel only runs
+  crons on the production deployment, so the daily job cannot run from the preview site; it is tested locally.
