@@ -41,6 +41,8 @@ export async function sendEmail(mail: Mail): Promise<SendResult> {
   if (!isValidEmail(to)) return { ok: false, error: "Invalid recipient address." };
 
   const provider = env("EMAIL_PROVIDER") || "smtp";
+  // Development and tests only: pretend to send. Refused on a production build, so it can never hide a real failure.
+  if (provider === "log" && process.env.NODE_ENV !== "production") return { ok: true, id: "logged-not-sent" };
   const from = env("EMAIL_FROM");
   const replyTo = env("REPLY_TO_EMAIL");
   if (!from) return { ok: false, error: "EMAIL_FROM is not set." };

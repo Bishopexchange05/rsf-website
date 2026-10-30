@@ -376,3 +376,17 @@ export const deleteAccount = {
       `Hello ${name},\n\nAs you asked, your account on the ${orgName} website has been deleted. Your login and personal details are gone, and your past bookings are kept only as anonymous figures for our financial records.\n\nIf you did not ask for this, please contact us straight away.\n\n${orgName}`,
   },
 };
+
+// Dormant accounts: deleted after 24 months without use, with a warning email 30 days before.
+export const dormantAccounts = {
+  warning: {
+    subject: "Your RSF account will be deleted in 30 days unless you sign in",
+    body: (name: string, loginUrl: string, accountUrl: string) =>
+      `Hello ${name},\n\nYou have not used your ${orgName} account for nearly two years. To keep people's information no longer than needed, we delete accounts that stay unused for 24 months.\n\nYour account will be deleted in 30 days. When that happens your login and personal details are removed, and your past bookings stay only as anonymous figures for our financial records.\n\nTo keep your account, just sign in once:\n${loginUrl}\n\nIf you would rather delete it yourself now, you can do that from your account page:\n${accountUrl}\n\nIf you have questions, please contact us.\n\n${orgName}`,
+  },
+  deleted: {
+    subject: "Your RSF account has been deleted",
+    body: (name: string, registerUrl: string) =>
+      `Hello ${name},\n\nAs we explained in our earlier email, your ${orgName} account has been deleted because it was not used for 24 months. Your login and personal details are gone, and your past bookings are kept only as anonymous figures for our financial records.\n\nYou are always welcome to make a new account:\n${registerUrl}\n\n${orgName}`,
+  },
+};
