@@ -773,3 +773,6 @@ owner's request (migration 0014, daily job route `/api/cron/daily`, `vercel.json
   reported. If it is more than 36 hours ago (or never), every Admin gets one email, at most one a day.
 - Needs from the owner (Vercel environment, never in chat): `CRON_SECRET`, `HEALTHCHECKS_READ_KEY`. Vercel only runs
   crons on the production deployment, so the daily job cannot run from the preview site; it is tested locally.
+Group 2 test run 31 October 2026 (migration 0015 run on DEV): `supabase/tests/group2.js` 22 of 22 passed (who is due, no
+repeats, retry queue and purge, the daily route with and without the secret, backup check reports "not set up" locally).
+Not tested: a real email failure feeding the retry queue, and the real Healthchecks call (needs the key).
