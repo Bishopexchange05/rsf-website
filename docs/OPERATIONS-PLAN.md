@@ -65,10 +65,9 @@ on Free, nothing else stops the project pausing or saves the data if something g
 
 **Decision (owner, 28 October 2026): stay on the Vercel Hobby plan for now.** Nothing is paid for through the
 website yet: clients pay by transfer at the office. The Hobby terms are non-commercial, and "requesting payment
-from visitors of the site" is their own example of commercial use. So **the day real customers start booking
-and paying through the site, Vercel must already be on Pro ($20 a month)**. That makes "Vercel on Pro" one of
-the gates for turning booking on (with the verified email domain, the lawyer review and the production
-Supabase project). Asking for donations does not count as commercial use.
+from visitors of the site" is their own example of commercial use. So **the owner will move Vercel to Pro ($20 a month) when real customers start booking and
+paying through the site.** This is advice, **not a gate**: the owner decides when booking goes live, and nothing
+blocks it (see "Launch gates are advice only" in `docs/PHASE2-PLAN.md`). Asking for donations does not count as commercial use.
 
 ## 2. Upgrade triggers (when to pay for more)
 
@@ -83,8 +82,8 @@ Upgrade the Supabase **production** project to Pro when **any** of these happens
 - You need **point-in-time recovery** or **support** (for example after a payment dispute).
 - Supabase warns you about limits or an upcoming pause.
 
-Move **Vercel to Pro** when real customers start booking and paying through the website (before booking opens
-to the public), or earlier if Vercel sends a usage or terms warning.
+Move **Vercel to Pro** when real customers start booking and paying through the website, or earlier if Vercel
+sends a usage or terms warning. (Advice, not a lock.)
 
 ## 3. Keep-alive (so a free project does not pause)
 

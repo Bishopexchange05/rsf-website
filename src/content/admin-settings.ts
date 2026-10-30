@@ -8,6 +8,7 @@ export const settingsHub = {
   switchOffText: "Booking is OFF. The public site shows no hours or prices from here, and nobody can book.",
   switchOnText: "Booking is ON. The public site shows opening hours, desks and the prices you have set.",
   turnOn: "Turn booking on",
+  turnOnAnyway: "Turn booking on anyway",
   turnOff: "Turn booking off",
   turnOnHelp: "You need to enter the bank details first.",
   sections: [
@@ -25,6 +26,8 @@ export const notices: Record<string, string> = {
   saved: "Saved.",
   "booking-on": "Booking is now ON.",
   "booking-off": "Booking is now OFF.",
+  "legal-marked": "Lawyer review marked as done.",
+  "legal-unmarked": "Lawyer review mark removed.",
 };
 
 export const errors: Record<string, string> = {
@@ -184,4 +187,33 @@ export const publicInfo = {
   overnightNote: "Overnight stays are for people 18 or over and are approved in person first.",
   book: { label: "Book a desk", href: "/book" },
   halfDayNote: (split: string) => `Half day: morning until ${split}, or afternoon from ${split}.`,
+};
+
+// The launch checklist: advice only, never a lock. The Admin decides when booking goes live.
+export const readiness = {
+  heading: "Before you switch booking on",
+  intro:
+    "A reminder, not a lock. You decide when booking goes live, and you can switch it on at any time. The only thing that stops it is missing bank details.",
+  allGood: "Everything on the checklist looks ready.",
+  ready: "Ready",
+  notReady: "Not ready",
+  items: {
+    email: {
+      label: "Emails come from your own domain",
+      ok: "Emails are sent through Resend from your own domain.",
+      warn: "Emails still go out through the temporary Gmail connection. Gmail-sent emails can land in spam at Yahoo and Outlook, so some people may not see them. To fix it, verify your domain with Resend and switch the email setting. (This check sees how the site is set up, not whether your domain records have been verified.)",
+    },
+    legal: {
+      label: "Lawyer review done",
+      ok: (date: string) => `Marked as done on ${date}.`,
+      warn: "The lawyer's review of the privacy, terms and booking wording is not marked as done.",
+      mark: "Mark lawyer review as done",
+      unmark: "Remove the mark",
+    },
+    production: {
+      label: "This is the live production site",
+      ok: "This is the production site.",
+      warn: "This looks like a test copy of the site (a preview or your own computer), so it may not be using your production Supabase project. Real customers should use the production site and its own database. (The site can only guess this from where it is running.)",
+    },
+  },
 };

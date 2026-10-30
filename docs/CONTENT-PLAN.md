@@ -69,9 +69,9 @@ nothing visible until you turn a switch on.
 
 **Can it be built while we wait for DNS and your lawyer? Yes.** It needs neither. It collects no new personal
 data except testimonial names (with a consent tick), and it does not touch booking or email. It can run on
-the development project while the gates (verified email domain, lawyer review, production project) are
-pending. I suggest this order: keep-alive and backups, then the remaining M8 code (reminders, email retry,
-download and delete my data, retention), then M9a to M9c while the gates are pending, then the final checks.
+the development project while the launch-checklist items (verified email domain, lawyer review, production
+project) are still open. I suggest this order: keep-alive and backups, then the remaining M8 code (reminders, email retry,
+download and delete my data, retention), then M9a to M9c while those items are open, then the final checks.
 
 ## 5. What I need from you
 

@@ -186,6 +186,17 @@ export async function saveBankAction(fd: FormData): Promise<ActionResult> {
 
 // ------------------------------------------------------- booking switch
 
+// Advisory launch checklist: the owner marks the lawyer's review as done (or removes the mark).
+// It never blocks anything.
+export async function setLegalReviewAction(fd: FormData): Promise<ActionResult> {
+  await requireRole(["admin"]);
+  const doneMark = text(fd, "done") === "true";
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("set_legal_review_done", { p_done: doneMark });
+  if (error) return bad(errorCode(error));
+  return done("", doneMark ? "legal-marked" : "legal-unmarked");
+}
+
 export async function setBookingEnabledAction(fd: FormData): Promise<ActionResult> {
   await requireRole(["admin"]);
   const enable = text(fd, "enable") === "true";

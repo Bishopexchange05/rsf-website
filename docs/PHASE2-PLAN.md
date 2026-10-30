@@ -320,6 +320,8 @@ No email address or password is written in this file or in any committed file. A
   3. Optionally turn on a short **auto-reply** (vacation responder) in the sender account pointing people to the Contact page.
 
 ### 3A.8 Measured deliverability and the launch requirement (decided by the owner)
+> **Update, 30 October 2026:** the owner decided that every launch condition in this plan (including this one) is an **advisory checklist, not a lock**. The website shows a warning when something is not ready, and the owner decides when booking goes live. See "Launch gates are advice only" at the end of this plan. The deliverability facts below still stand.
+
 **Measured in M1 testing (Gmail SMTP bridge):** the verification email reached Gmail inboxes, but on **Yahoo and Outlook it landed in spam, instantly, with the correct sender name**. This is the spam-folder risk named in 3A.2. It is acceptable while the system is being built and tested, but **it is not acceptable for real customers**, many of whom use Yahoo or Outlook addresses.
 
 **LAUNCH REQUIREMENT:** before the booking system is opened to the public, a **verified sending domain** must be in place (Resend with `rafaelsupportfoundation.org`, SPF and DKIM passing, a DMARC record published), and the switch-over checklist in 3A.5 must be completed. **The Gmail bridge is for development and testing only and must not be the production sender.** If the main domain's DNS is still unavailable at that point, the fallback is option C2 (a small separate email-only domain verified in Resend) or option C1 (a mailbox on the main domain), never Gmail alone.
@@ -463,7 +465,7 @@ Each milestone is built on `phase-2`, tested on a Vercel preview deployment of t
 - Explicit test that no page, API response or email leaks the location early, and that no upload field exists.
 
 ### M8. Hardening, NDPA and launch
-- **Launch gate: email domain verification (3A.8).** Booking is not opened to the public until Resend (or the fallback in 3A.8) sends from a verified domain and the Gmail, Yahoo and Outlook inbox test passes.
+- **Launch checklist item (advice only, not a lock), email domain verification (3A.8).** The advice is that booking is not opened to the public until Resend (or the fallback in 3A.8) sends from a verified domain and the Gmail, Yahoo and Outlook inbox test passes.
 - Download my data, delete my account, retention job, final privacy/terms/NDPR text (including Supabase and Google as processors, and the new login cookie), cookie statement update.
 - Load and concurrency tests, accessibility check, dark mode check, PageSpeed check (target stays 99 mobile), Nigerian-network testing on a phone.
 - Backups confirmed (Pro plan), production Supabase project, Vercel production env vars, owner sign-off, then your explicit approval to merge `phase-2` into `main` (CLAUDE.md currently forbids this, so it will be updated at that point). Booking calls to action replace the request forms only after the system has passed testing; the old forms remain as the fallback via the `booking_enabled` flag.
@@ -616,15 +618,16 @@ Out of scope for this plan (listed in CLAUDE.md as Phase 2 but later): courses/L
 
 These are the owner's decisions for M8. M8 has **not started** and needs separate approval.
 
-**Staged launch (replaces the single "go live" step).** The launch date is decided by the gates below;
-16 October has passed.
+**Staged launch (replaces the single "go live" step).** The launch date is the owner's decision (the former gates are now an advisory
+checklist, see "Launch gates are advice only" at the end of this plan); 16 October has passed.
 1. **Merge `phase-2` into `main` with accounts and booking switched OFF in production**, so visitors see no
    change (the public pages answer as today; account paths return a true 404). Needs the owner's explicit
    approval and a CLAUDE.md update at that point.
 2. **When DNS access arrives**, verify the domain with Resend and switch email over by configuration only
    (checklist in 3A.5). The owner does not have DNS access and does not know when it will return.
-3. **Turn booking on only when all three are true:** the email domain is verified, the owner's lawyer has
-   reviewed the new text (`docs/LEGAL-REVIEW.md`), and the production Supabase project exists.
+3. **Turn booking on when the owner decides.** The advice (shown as warnings on the Settings page, never a
+   lock) is: the email domain is verified, the owner's lawyer has reviewed the new text
+   (`docs/LEGAL-REVIEW.md`), and the production Supabase project is in use.
 
 **Reminder emails (my defaults, approved):** the day before at about 5:00 PM; monthly pass "starts tomorrow"
 (one day before the start) and "ends in 5 days" (with Renew); "hold expiring" about 30 minutes before the
@@ -638,8 +641,8 @@ for the lawyer are in one document, `docs/LEGAL-REVIEW.md`.
 
 **Supabase and Vercel plans (recommended; the owner confirms):** the development project stays on Supabase
 Free. Build a keep-alive and encrypted off-site backups now (`docs/OPERATIONS-PLAN.md`). **Upgrade the
-production project to Supabase Pro before booking opens**, and move Vercel to Pro before booking opens,
-because Vercel Hobby is non-commercial and requesting payment from visitors counts as commercial use.
+production project to Supabase Pro when real paying users arrive**, and move Vercel to Pro when real customers
+book and pay (Vercel Hobby is non-commercial and requesting payment from visitors counts as commercial use).
 Upgrade triggers are listed in `docs/OPERATIONS-PLAN.md`.
 
 **Revised M8 contents.** Code: scheduled reminder emails and failed-email retry; download my data; delete
@@ -661,7 +664,8 @@ the planning sitemap; `docs/SITE-AUDIT.md`, `docs/CONTENT-PLAN.md` (M9 content m
   conflicts.
 - **Vercel: stay on Hobby for now.** Nothing is paid for through the website yet; clients pay by transfer at
   the office. Upgrade to Pro when real customers start booking and paying through the site, because the Hobby
-  terms are non-commercial. "Vercel on Pro" is added as a gate for turning booking on.
+  terms are non-commercial. (Update 30 October: "Vercel on Pro" is **not** a gate. The owner will upgrade when real
+  customers book and pay.)
 - **Supabase: stay on Free for now.** Upgrade when there are real paying users, or earlier if a trigger fires:
   database near 350 MB, about 50 members, a backup or keep-alive failing twice, a need for point-in-time
   recovery or support. This is why the keep-alive and backups matter. Details in `docs/OPERATIONS-PLAN.md`.
@@ -685,3 +689,24 @@ the planning sitemap; `docs/SITE-AUDIT.md`, `docs/CONTENT-PLAN.md` (M9 content m
   (Healthchecks green, the daily folder with three files in `rsf-backups`, and a decrypted dump starting with
   PGDMP) and approved the separate workflow-only change to `main`. It added only `.github/workflows/` (3 files)
   and `ops/backup.sh`, then `main` was merged into `phase-2`. M8 has not started.
+
+## Launch gates are advice only (owner decision, 30 October 2026)
+
+This **replaces** every earlier statement in this plan that booking "must not" or "does not" go live until some
+condition is met (the email domain, the lawyer review, the production Supabase project, Vercel on Pro).
+
+- **The owner decides when booking goes live.** Nothing forces it and nothing blocks it.
+- **The booking switch (`booking_enabled`) can be changed by an Admin only** (not Staff, not Members). It is
+  recorded in the audit log.
+- **The only refusal that remains** is the existing safety rule: the switch will not turn on while no bank
+  details are entered.
+- **Warnings, not locks.** On the Admin Settings page, before booking is switched on, a checklist shows what is
+  not ready: (1) emails are not yet sent from the Foundation's own domain through Resend (the site can see how it
+  is configured, not whether the domain records are verified); (2) the lawyer's review is not marked as done (an
+  Admin marks it, with who and when recorded); (3) the site is not the live production site, so it may not be
+  using the production Supabase project (a best guess from where the site is running). If anything is not ready
+  the button reads "Turn booking on anyway". It always works.
+- **"Vercel on Pro" is no longer a gate.** The owner will upgrade when real customers book and pay (the Hobby
+  terms are non-commercial). The upgrade triggers in `docs/OPERATIONS-PLAN.md` stay as advice.
+- Implemented in migration `0012_legal_review_mark.sql`, `src/lib/readiness.ts` and the Settings page.
+  Tested by `supabase/tests/launch-checklist.js`.

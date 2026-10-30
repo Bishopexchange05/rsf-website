@@ -14,8 +14,8 @@ Data Protection / NDPR Statement), generated from the website's own content file
 ## Part A. What the booking system adds (facts for the lawyer)
 
 The website has so far only collected request forms by email. The booking system (Phase 2) adds the
-following. None of it is live to the public yet: booking stays switched off until the gates in
-the conditions the Foundation has set are met, including this review.
+following. None of it is live to the public yet: booking stays switched off until the
+Foundation decides to open it. This review is one item on the Foundation's own launch checklist.
 
 **Accounts.** A person can register with name, phone number, email address and a password (the password
 is stored hashed by our database provider, never in readable form). They must accept the Terms and

@@ -6,8 +6,8 @@ charity supporting youth education through scholarships and
 competitions. The site presents the Foundation's mission, impact and
 programmes, including "RSF Tech and Space" (workspace, media room,
 Learning Hub, consulting, media agency), which is run under the
-Foundation. The launch date is set by the gates in `docs/PHASE2-PLAN.md`
-(the 16 October target has passed). Built in two phases. Read
+Foundation. The owner decides when booking goes live (the 16 October target
+has passed; see "Launch gates are advice only" in `docs/PHASE2-PLAN.md`). Built in two phases. Read
 PHASE_STATUS before implementing anything.
 
 ## Tone
@@ -58,6 +58,12 @@ Phase 2 covers:
   gateway.
 - Never commit secrets or `.env.local`. The website must never collect or store
   ID documents.
+
+**Booking go-live is the owner's decision.** The launch conditions (verified email domain, lawyer review done,
+production Supabase in use) are an **advisory checklist** shown as warnings on the Admin Settings page. They
+never block or force anything. Only an Admin can change `booking_enabled`. The only refusal is the existing
+rule that it will not turn on while no bank details are entered. Do not add new locks or required gates.
+Vercel on Pro is not a gate either; the owner upgrades when real customers book and pay.
 
 On `main`, Phase 1 behaviour stays as it is: course "Enroll" buttons show
 "Coming Soon", the course catalog/detail is display-only with no prices, and
