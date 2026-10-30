@@ -40,6 +40,7 @@ export const errors = {
   passwordMismatch: "The two passwords do not match.",
   passwordSame: "Choose a password you have not used for this account before.",
   terms: "Please tick the box to continue.",
+  adult: "Please tick the box to confirm you are 18 or over.",
   badLogin: "That email and password do not match. Please try again.",
   emailRate: "We have sent several emails already. Please wait a little and try again.",
   waitResend: "Please wait a minute before asking for another email.",
@@ -52,6 +53,8 @@ export const register = {
   text: `Make an account to book a place at RSF Tech & Space. ${orgName} uses your details only to run your bookings.`,
   submit: "Create account",
   terms: "I agree to the Terms of use and I have read the Privacy Policy.",
+  adult: "I am 18 or over.",
+  adultHelp: "Accounts are for adults. We keep only the fact that you confirmed this, and when, not your age or date of birth. Under 18? Please ask a parent or guardian to book for you.",
   termsLinks: [
     { label: "Terms of use", href: "/terms" },
     { label: "Privacy Policy", href: "/privacy" },
@@ -136,6 +139,14 @@ export const account = {
   signOut: "Log out",
   adminLink: { label: "Open the admin area", href: "/admin" },
   bookingsLink: { label: "My bookings", href: "/account/bookings" },
+  data: {
+    heading: "Your information",
+    text: "You can download a copy of everything we hold about you, or delete your account.",
+    download: "Download my data",
+    downloadHelp: "A file you can open in any text editor. It contains only your own information.",
+    deleteLink: { label: "Delete my account", href: "/account/delete" },
+    staffNote: "Staff and Admin accounts cannot be deleted here. Ask an Admin to change your account to Member first.",
+  },
   notices: {
     verified: "Your email is verified. Welcome.",
   } as Record<string, string>,
@@ -322,4 +333,46 @@ export const emailHealth = {
   tableHeading: "Last 14 days",
   columns: { day: "Day", sent: "Sent", failed: "Failed" },
   empty: "No emails recorded yet.",
+};
+
+// Download and delete (NDPA rights). Wording for the account page, the delete page and the email.
+export const deleteAccount = {
+  title: "Delete your account",
+  heading: "Delete your account",
+  text: "This removes your login. It cannot be undone.",
+  whatHappens: {
+    heading: "What happens",
+    list: [
+      "Your login is removed straight away, and you are signed out.",
+      "Your name, phone number and email are deleted from our system.",
+      "Your past bookings stay only as anonymous figures (amounts, dates and references), because we must keep financial records. They are no longer linked to you.",
+      "You can register again later, with the same email address, as a new account.",
+    ],
+  },
+  blockers:
+    "You cannot delete your account while you have an unfinished booking, a payment being checked, or a refund we still owe you. Cancel or finish those first, or contact us.",
+  passwordLabel: "Your password (to confirm it is you)",
+  confirmLabel: "I understand this cannot be undone.",
+  button: "Delete my account",
+  pending: "Deleting…",
+  back: { label: "No, take me back to my account", href: "/account" },
+  errors: {
+    "bad-password": "That password is not right.",
+    confirm: "Please tick the box to confirm.",
+    "open-bookings": "You still have a booking or a refund that is not finished. Please finish or cancel it first, or contact us.",
+    staff: "Staff and Admin accounts cannot be deleted here. Ask an Admin to change your account to Member first.",
+    "too-many": "Too many attempts. Please wait a while and try again.",
+    failed: "That did not work. Please try again, or contact us.",
+  } as Record<string, string>,
+  done: {
+    title: "Your account has been deleted",
+    heading: "Your account has been deleted",
+    text: "Your login has been removed and your personal details deleted. Thank you for being part of RSF Tech & Space. You are always welcome to come back.",
+    home: { label: "Back to the home page", href: "/" },
+  },
+  email: {
+    subject: "Your RSF account has been deleted",
+    body: (name: string) =>
+      `Hello ${name},\n\nAs you asked, your account on the ${orgName} website has been deleted. Your login and personal details are gone, and your past bookings are kept only as anonymous figures for our financial records.\n\nIf you did not ask for this, please contact us straight away.\n\n${orgName}`,
+  },
 };

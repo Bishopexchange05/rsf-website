@@ -724,3 +724,25 @@ condition is met (the email domain, the lawyer review, the production Supabase p
   the original legal text is shown. **The lawyer-review mark in Admin, Settings has not been pressed.** The owner
   presses it after the lawyer has seen the final text. Overnight stays stay 18 and over only, approved in person,
   with no ID uploaded or stored.
+
+## M8 in groups (approved to start, 30 October 2026)
+
+M8 is built in bigger steps: each group is built and self-tested first, then the owner is asked for ONE approval
+per group, with plain test instructions. Rules unchanged: `phase-2` only, nothing to `main` without approval,
+no secrets in chat or git, no ID documents on the site, bank transfer only, launch gates are advisory.
+
+1. **Group 1, your data (NDPA):** the "I am 18 or over" tick at registration (stores only that it was confirmed
+   and when), self-service Download my data, self-service Delete my account (login removed, bookings anonymised,
+   accounting figures kept), and the retention job (anonymise after 12 months of inactivity, email log 12 months,
+   audit log and accounting kept). Migration 0013.
+2. **Group 2, scheduled emails and alerts:** reminder emails (day before about 5:00 PM, pass starts tomorrow, pass
+   ends in 5 days, hold expiring about 30 minutes before) and failed-email retry, run by one daily job protected
+   by `CRON_SECRET`; and an in-site check that emails the owner if the last backup is older than 36 hours.
+3. **Group 3, search and sharing (SEO):** canonical URL on every page, Open Graph title, description and address
+   for each page, tidied meta descriptions, structured data (Tech & Space, WebSite), fixed sitemap dates, and
+   the five sign-in pages noindex but crawlable.
+4. **Group 4, speed:** the large images (smaller files for the hero and gallery photos, correct sizes), measured
+   before and after.
+5. **Group 5, launch readiness:** a full restore rehearsal plan, the pre-launch clean-up of test data, the
+   production checklist (Supabase region, Vercel variables, retention job on the production database), and the
+   final verification list.

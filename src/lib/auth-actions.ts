@@ -62,6 +62,7 @@ export async function registerAction(_prev: ActionState, fd: FormData): Promise<
   const email = cleanEmail(text(fd, "email"));
   const password = text(fd, "password");
   const terms = text(fd, "terms") === "on";
+  const adult = text(fd, "adult") === "on";
   const values = { fullName, phone: phoneRaw, email };
 
   const fieldErrors: Record<string, string> = {};
@@ -71,6 +72,7 @@ export async function registerAction(_prev: ActionState, fd: FormData): Promise<
   const pe = passwordError(password);
   if (pe) fieldErrors.password = pe;
   if (!terms) fieldErrors.terms = errors.terms;
+  if (!adult) fieldErrors.adult = errors.adult;
   if (Object.keys(fieldErrors).length) return { fieldErrors, values, error: common.fixFields };
 
   if (await limited(`signup:${await ip()}`, 5, TEN_MIN)) {
@@ -84,7 +86,8 @@ export async function registerAction(_prev: ActionState, fd: FormData): Promise<
     password,
     options: {
       emailRedirectTo: `${origin}/auth/confirm`,
-      data: { full_name: fullName, phone, terms_accepted: true },
+      // Only the fact is stored (and the database adds the time): no date of birth, no age.
+      data: { full_name: fullName, phone, terms_accepted: true, adult_confirmed: true },
     },
   });
 

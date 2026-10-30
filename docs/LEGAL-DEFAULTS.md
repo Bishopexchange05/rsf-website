@@ -271,7 +271,7 @@ Accounts are for people aged 18 and over. If you are under 18, please ask a pare
 
 #### Your information: ask us (draft wording)
 
-You can ask us at any time for a copy of your information, to correct it, or to delete your account (+234 708 196 5663, or through our [Contact page](/contact)). We reply within 30 days. When your account is deleted your sign-in is removed and your bookings are anonymised. We keep accounting figures (amounts, dates, references) because the law requires financial records.
+You can download a copy of your information and delete your account yourself from your account page, or ask us (+234 708 196 5663, or through our [Contact page](/contact)). We reply to requests within 30 days. When your account is deleted your sign-in is removed and your bookings are anonymised. We keep accounting figures (amounts, dates, references) because the law requires financial records.
 
 - (cookie list) A sign-in cookie, set only when you log in, that keeps you signed in. It is needed for your account to work.
 

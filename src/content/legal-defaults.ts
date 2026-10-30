@@ -213,7 +213,7 @@ export const privacyAccounts: LegalBlock[] = [
 
   h2(`Your information: ask us ${DRAFT}`),
   p(
-    `You can ask us at any time for a copy of your information, to correct it, or to delete your account (${contact}). We reply within ${v.rightsReplyDays} days. When your account is deleted your sign-in is removed and your bookings are anonymised. We keep accounting figures (amounts, dates, references) because the law requires financial records.`,
+    `You can download a copy of your information and delete your account yourself from your account page, or ask us (${contact}). We reply to requests within ${v.rightsReplyDays} days. When your account is deleted your sign-in is removed and your bookings are anonymised. We keep accounting figures (amounts, dates, references) because the law requires financial records.`,
   ),
 ];
 

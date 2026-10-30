@@ -52,6 +52,26 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ n
         </Link>
       </p>
 
+      <h2 className="mt-10 text-h3">{account.data.heading}</h2>
+      <div className="mt-4 space-y-3">
+        <p>{account.data.text}</p>
+        <p>
+          <a href="/api/account/export" download className="inline-flex min-h-11 items-center font-medium underline underline-offset-2">
+            {account.data.download}
+          </a>
+          <span className="block text-sm opacity-75">{account.data.downloadHelp}</span>
+        </p>
+        {staffOrAdmin ? (
+          <p className="text-sm opacity-85">{account.data.staffNote}</p>
+        ) : (
+          <p>
+            <Link href={account.data.deleteLink.href} className="inline-flex min-h-11 items-center font-medium underline underline-offset-2">
+              {account.data.deleteLink.label}
+            </Link>
+          </p>
+        )}
+      </div>
+
       <h2 className="mt-10 text-h3">{account.passwordHeading}</h2>
       <div className="mt-4">
         <ChangePasswordForm />

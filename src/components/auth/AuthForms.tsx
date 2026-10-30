@@ -182,6 +182,16 @@ export function RegisterForm() {
         </label>
         {fe.terms && <p className="mt-1 text-sm font-medium text-accent-red dark:text-red-300">{fe.terms}</p>}
       </div>
+      <div>
+        <label className="flex min-h-11 items-start gap-3">
+          <input type="checkbox" name="adult" aria-invalid={!!fe.adult} className="mt-1 h-5 w-5 shrink-0 accent-navy" />
+          <span className="text-sm">
+            <span className="block font-semibold">{register.adult}</span>
+            <span className="block opacity-75">{register.adultHelp}</span>
+          </span>
+        </label>
+        {fe.adult && <p className="mt-1 text-sm font-medium text-accent-red dark:text-red-300">{fe.adult}</p>}
+      </div>
       <SubmitButton label={register.submit} />
     </form>
   );
