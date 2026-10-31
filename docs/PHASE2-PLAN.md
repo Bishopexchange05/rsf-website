@@ -786,3 +786,7 @@ no prices, never the overnight address) on Tech & Space; the sitemap carries fix
 when a page really changes); the five sign-in pages are no longer blocked in `robots.txt` and still say `noindex`. With
 accounts off they return a true 404. Not measured: how Google actually shows the pages (needs the live site and time),
 and the structured data was not run through Google's Rich Results test (needs the live address).
+
+**Group 3 approved by the owner (31 October 2026).** Group 4 (speed: large images) started.
+
+**Group 4 (speed, 31 October 2026):** measured; the images are already served small (AVIF/WebP, right size, lazy), so no code change. See PERFORMANCE-REPORT section 6.

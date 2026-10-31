@@ -95,3 +95,17 @@ Checked 16 pages at 3 widths (48 loads), including the signed-in booking pages.
 - Footer headings are level 2; small standalone links have a full-size tap area.
 
 Nothing here changes the live site until `phase-2` is merged, which needs your approval.
+
+## 6. Large images (checked 31 October 2026, M8 group 4): no change needed
+
+Measured on a production build with a phone-sized screen (412 px wide, 2x sharpness, like a Galaxy S21 Ultra):
+- The photos on disk are modest: the biggest is 287 kB (`closing-banner.jpg`); the logo file is 237 kB.
+- The site never sends those files as they are. Every photo goes through the image optimiser, which sends AVIF or WebP
+  at the screen's size. On the phone, the hero photo was 14 to 22 kB, the About photos 18 to 42 kB, the logo 4 kB.
+  All the pictures on the home page together were about 40 kB. On a large desktop screen the biggest photo was 77 kB.
+- Every picture below the first screen loads only when scrolled to, and every image has a `sizes` setting that matches its layout.
+- The only large file is the 3.4 MB Tech & Space tour video. It is not loaded at all until a visitor presses Play
+  (`preload="none"`). The background hero video on the home page is only 51 kB, is added after the page has loaded, and
+  is skipped on slow connections, data saver and reduced-motion settings.
+So there is nothing to shrink that would change what a visitor downloads. Shrinking the source files would only save disk space.
+Optional, not done: re-encode the tour video to a smaller size (needs your original clip and a video tool); it would only help visitors who press Play.
