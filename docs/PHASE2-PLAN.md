@@ -800,3 +800,8 @@ both placeholders only; production keep-alive and backup as `.github/workflows/k
 nothing until the PROD secrets exist; the staged launch; test-data clean-up; restore rehearsal plan; final verification list).
 Nothing was run or merged. Decision recorded: the first Admin needs accounts on, so production gets a short "quiet window" with
 accounts on, even though booking stays off.
+
+**Group 5 pack approved by the owner (31 October 2026), pack only.** Approved with it: the short quiet window with accounts on
+(owner switches accounts off afterwards if not launching), the restore rehearsal later (remind the owner to pause the dev
+Healthchecks monitors first), the Gmail bridge if Supabase's own email fails, and the harmless daily "not found" from the cron.
+**The merge to `main` (part D) is NOT approved yet; the owner will say yes separately.** Part B (production Supabase) started.
