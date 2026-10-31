@@ -8,14 +8,13 @@ Read `CLAUDE.md` first, then this file. Detail lives in `docs/PHASE2-PLAN.md` (d
 - **Done, tested and approved by the owner:** M1 to M7 (accounts, 2FA, settings, day bookings, bank-transfer
   flow, monthly pass, overnight workspace). Migrations 0001 to 0015 are run on the DEV Supabase project.
 - **M8 (approved to start, in groups).** Group 1 (NDPA: "I am 18 or over" tick at registration, Download my
-  data, Delete my account, 12-month retention job, 24-month dormant-account deletion with a warning email) is
-  **built and self-tested, WAITING FOR THE OWNER'S APPROVAL.** Tests: `supabase/tests/ndpa.js` 31/31,
-  `dormant.js` 15/15, `launch-checklist.js` 11/11. Owner's test steps (Vercel preview): check the pg_cron job with
+  data, Delete my account, 12-month retention job, 24-month dormant-account deletion with a warning email) was
+  built, tested and approved. Tests: `supabase/tests/ndpa.js` 31/31,
+  `dormant.js` 15/15, `launch-checklist.js` 11/11. Owner's test steps were (Vercel preview): check the pg_cron job with
   `select jobname, schedule from cron.job;` (expect `rsf-retention` at `15 2 * * *`); register form shows the 18+
   box and refuses without it; register a real test account; Download my data (own data only, no password);
   Delete is refused while a booking is open, works after cancelling (email "Your RSF account has been
   deleted"); Admin, Audit log shows `account.export` and `account.delete`; switch booking off afterwards.
-  The owner will reply "Group 1 approved" or what failed.
 - **Group 1 (NDPA), Group 2 (reminders, email retry, backup-age alert; migration 0015; test 22/22), Group 3 (SEO), Group 4
   (images: measured, no change needed): all APPROVED by the owner (31 October 2026).**
 - **Group 5 (launch readiness): pack written, WAITING FOR APPROVAL:** `docs/PRODUCTION-LAUNCH.md` (production setup, first-Admin
