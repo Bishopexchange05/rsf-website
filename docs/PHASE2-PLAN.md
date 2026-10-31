@@ -805,3 +805,11 @@ accounts on, even though booking stays off.
 (owner switches accounts off afterwards if not launching), the restore rehearsal later (remind the owner to pause the dev
 Healthchecks monitors first), the Gmail bridge if Supabase's own email fails, and the harmless daily "not found" from the cron.
 **The merge to `main` (part D) is NOT approved yet; the owner will say yes separately.** Part B (production Supabase) started.
+
+**Part B done (31 October 2026):** production Supabase `rsf-website-prod` created in London (`eu-west-2`); Data API on, "automatically
+expose new tables" off, automatic RLS on; pg_cron on; migrations 0001 to 0015 run in order, all clean; checks passed (two cron jobs
+`expire-booking-holds` and `rsf-retention`, 16 public tables all with row-level security, 0 profiles, 0 sign-ins, 0 bookings).
+Auth: Site URL and one redirect URL set to the live domain, confirm email on, minimum password 10, TOTP on. Supabase locks email
+templates until custom SMTP exists, so the Gmail bridge (new app password, stored only in the owner's password manager) was set up
+in the Supabase SMTP form, then the Confirm signup and Reset password templates were pasted in. Still NOT done: merge to `main`,
+Vercel production variables, first Admin, production keep-alive and backup (part C), domain email (part G).
