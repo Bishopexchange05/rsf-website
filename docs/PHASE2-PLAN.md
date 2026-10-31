@@ -790,3 +790,13 @@ and the structured data was not run through Google's Rich Results test (needs th
 **Group 3 approved by the owner (31 October 2026).** Group 4 (speed: large images) started.
 
 **Group 4 (speed, 31 October 2026):** measured; the images are already served small (AVIF/WebP, right size, lazy), so no code change. See PERFORMANCE-REPORT section 6.
+
+**Group 4 approved by the owner (31 October 2026); tour video skipped for now.** Group 5 (launch readiness) started.
+
+**Group 5 status (31 October 2026):** the launch pack is written and waiting for the owner's approval: `docs/PRODUCTION-LAUNCH.md`
+(production Supabase `rsf-website-prod` in London `eu-west-2` with Vercel function region `lhr1`; migrations 0001 to 0015;
+auth settings; first-Admin runbook with `supabase/ops/first-admin.sql` and the last-resort `supabase/ops/unlock-admin-two-step.sql`,
+both placeholders only; production keep-alive and backup as `.github/workflows/keep-alive-prod.yml` and `backup-prod.yml`, which do
+nothing until the PROD secrets exist; the staged launch; test-data clean-up; restore rehearsal plan; final verification list).
+Nothing was run or merged. Decision recorded: the first Admin needs accounts on, so production gets a short "quiet window" with
+accounts on, even though booking stays off.

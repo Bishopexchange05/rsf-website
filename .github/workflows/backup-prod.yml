@@ -1,0 +1,103 @@
+# Nightly encrypted backup of the PRODUCTION database (the twin of backup.yml, which backs up development).
+# The work is in ops/backup.sh. Backups go to their OWN private repository, rsf-backups-prod, so
+# development and production backups are never mixed.
+#
+# SAFE UNTIL SET UP: while the production secrets below do not exist, this workflow does nothing
+# at all (no failure, no ping). It starts working by itself once you add them
+# (docs/PRODUCTION-LAUNCH.md, part B). It prints no keys.
+#
+# Secrets used: PROD_DB_BACKUP_URL, BACKUP_GPG_PUBLIC_KEY (the same one as development),
+# BACKUP_REPO_TOKEN_PROD (a token that can write only to rsf-backups-prod), HC_BACKUP_PROD_URL.
+# Triggers: the schedule below, and the "Run workflow" button in the Actions tab.
+
+name: Backup (production)
+
+on:
+  schedule:
+    - cron: "33 3 * * *"
+    # A second run later the same day, so one late or dropped run still leaves a backup for the day.
+    - cron: "13 15 * * *"
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: backup-prod
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      scratch:
+        # A throwaway database used only to prove each backup can be restored. It is not a secret.
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: scratch-only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      HC_URL: ${{ secrets.HC_BACKUP_PROD_URL }}
+      SRC_DB_URL: ${{ secrets.PROD_DB_BACKUP_URL }}
+    steps:
+      - name: Check that production is set up
+        id: guard
+        run: |
+          if [ -z "${SRC_DB_URL}" ]; then
+            echo "Production is not set up yet (no PROD_DB_BACKUP_URL). Nothing to do."
+            echo "go=no" >> "${GITHUB_OUTPUT}"
+          else
+            echo "go=yes" >> "${GITHUB_OUTPUT}"
+          fi
+
+      - name: Check out the repository
+        if: steps.guard.outputs.go == 'yes'
+        uses: actions/checkout@v4
+
+      - name: Install the Postgres 17 tools
+        if: steps.guard.outputs.go == 'yes'
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-common
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y -qq postgresql-client-17
+          # The runner already has an older Postgres 16 on its path. Put 17 first so pg_dump matches the server.
+          echo "/usr/lib/postgresql/17/bin" >> "${GITHUB_PATH}"
+          /usr/lib/postgresql/17/bin/pg_dump --version
+
+      - name: Back up, test the restore, encrypt and store
+        if: steps.guard.outputs.go == 'yes'
+        env:
+          SCRATCH_DB_URL: postgresql://postgres:scratch-only@localhost:5432/postgres
+          GPG_PUBLIC_KEY: ${{ secrets.BACKUP_GPG_PUBLIC_KEY }}
+          BACKUP_REPO: ${{ github.repository_owner }}/rsf-backups-prod
+          BACKUP_REPO_TOKEN: ${{ secrets.BACKUP_REPO_TOKEN_PROD }}
+        run: bash ops/backup.sh
+
+      - name: Tell the monitor it worked
+        if: steps.guard.outputs.go == 'yes'
+        run: |
+          if [ -z "${HC_URL}" ]; then echo "::warning::HC_BACKUP_PROD_URL is not set, so no monitor was told."; exit 0; fi
+          curl -fsS -m 15 --retry 3 --retry-delay 5 -o /dev/null "${HC_URL}"
+          echo "Monitor told."
+
+      - name: Tell the monitor it failed
+        if: failure() && steps.guard.outputs.go == 'yes'
+        run: |
+          if [ -n "${HC_URL}" ]; then curl -fsS -m 15 --retry 3 -o /dev/null "${HC_URL%/}/fail" || true; fi
+
+      - name: Ask GitHub to keep this schedule switched on
+        if: success() && github.ref == 'refs/heads/main'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow enable backup-prod.yml --repo "${GITHUB_REPOSITORY}"

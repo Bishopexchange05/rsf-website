@@ -6,7 +6,7 @@ Read `CLAUDE.md` first, then this file. Detail lives in `docs/PHASE2-PLAN.md` (d
 
 ## 1. Current state
 - **Done, tested and approved by the owner:** M1 to M7 (accounts, 2FA, settings, day bookings, bank-transfer
-  flow, monthly pass, overnight workspace). Migrations 0001 to 0014 are run on the DEV Supabase project.
+  flow, monthly pass, overnight workspace). Migrations 0001 to 0015 are run on the DEV Supabase project.
 - **M8 (approved to start, in groups).** Group 1 (NDPA: "I am 18 or over" tick at registration, Download my
   data, Delete my account, 12-month retention job, 24-month dormant-account deletion with a warning email) is
   **built and self-tested, WAITING FOR THE OWNER'S APPROVAL.** Tests: `supabase/tests/ndpa.js` 31/31,
@@ -16,11 +16,12 @@ Read `CLAUDE.md` first, then this file. Detail lives in `docs/PHASE2-PLAN.md` (d
   Delete is refused while a booking is open, works after cancelling (email "Your RSF account has been
   deleted"); Admin, Audit log shows `account.export` and `account.delete`; switch booking off afterwards.
   The owner will reply "Group 1 approved" or what failed.
-- **Next groups, one approval each:** Group 2 reminder emails + failed-email retry + in-site backup-age alert
-  (daily job `/api/cron/daily`, `CRON_SECRET`; already has the dormant-account step; `vercel.json` cron 03:00).
-  Group 3 SEO (canonical URLs, per-page Open Graph, meta descriptions, structured data, fixed sitemap dates, the 5
-  sign-in pages noindex but crawlable). Group 4 large images. Group 5 restore-rehearsal plan, pre-launch test-data
-  clean-up, production checklist.
+- **Group 1 (NDPA), Group 2 (reminders, email retry, backup-age alert; migration 0015; test 22/22), Group 3 (SEO), Group 4
+  (images: measured, no change needed): all APPROVED by the owner (31 October 2026).**
+- **Group 5 (launch readiness): pack written, WAITING FOR APPROVAL:** `docs/PRODUCTION-LAUNCH.md` (production setup, first-Admin
+  runbook, staged launch, clean-up, restore rehearsal, final checklist) plus `supabase/ops/first-admin.sql`,
+  `unlock-admin-two-step.sql` and the idle `keep-alive-prod.yml` / `backup-prod.yml`. After approval: the owner decides when to
+  do each step; the merge to `main` needs a separate explicit yes. M9 content manager is not started.
 - **On `main` (owner-approved):** banner removed (7ab35a2); `.github/workflows/` keep-alive (04:17 and 16:47 UTC),
   backup (02:43 and 14:23 UTC, script `ops/backup.sh`), heartbeat (1st and 15th). Nothing else from Phase 2 is on
   `main`. GitHub runs scheduled jobs 4 to 6 hours late; all runs so far green. Healthchecks grace widened to 12 h by
