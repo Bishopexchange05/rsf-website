@@ -822,3 +822,12 @@ the deploy: all 10 public pages, `/sitemap.xml` (10 URLs), `/robots.txt` (new ru
 `/two-factor`, `/auth/confirm`, `/api/account/export` and the daily job route answer 404; `/api/me` answers
 `{"signedIn":false,"role":null}` (by design); no Login link in the header; canonical, link-preview and structured data present; no
 prices anywhere. Still not done: part C (production backup and keep-alive), accounts on and the first Admin (part E), part F, G, H.
+
+**Part C done (1 November 2026):** production backup and keep-alive proven by hand-run workflows on `main`: Keep-alive (production)
+green and `RSF prod keep-alive` up; Backup (production) green, encrypted `.gpg` files stored in the private `rsf-backups-prod`,
+`RSF prod backup` up. Set up: read-only `backup_reader` database user on production (check row `true`, `true`), six GitHub secrets
+(`PROD_SUPABASE_URL`, `PROD_SUPABASE_PUBLISHABLE_KEY`, `PROD_DB_BACKUP_URL`, `BACKUP_REPO_TOKEN_PROD`, `HC_KEEPALIVE_PROD_URL`,
+`HC_BACKUP_PROD_URL`), a fine-grained token limited to `rsf-backups-prod` (expires in about a year: renew), and in Vercel Production
+`HEALTHCHECKS_READ_KEY` (read-only, Secret) and `HEALTHCHECKS_CHECK_NAME` = `RSF prod backup`. Those two take effect at the next
+redeploy (the accounts switch in part E). Not yet proven: a restore of a production backup (part J). Next: part E (accounts on,
+first Admin), then F, G, H, J.
