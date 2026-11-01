@@ -813,3 +813,12 @@ Auth: Site URL and one redirect URL set to the live domain, confirm email on, mi
 templates until custom SMTP exists, so the Gmail bridge (new app password, stored only in the owner's password manager) was set up
 in the Supabase SMTP form, then the Confirm signup and Reset password templates were pasted in. Still NOT done: merge to `main`,
 Vercel production variables, first Admin, production keep-alive and backup (part C), domain email (part G).
+
+**Part D done (1 November 2026): `phase-2` merged into `main` by the owner's explicit yes, accounts still OFF.** `main` fast-forwarded
+to `0761ca6` (167 files, no conflicts); Vercel Production variables for `rsf-website-prod`, Gmail SMTP and `CRON_SECRET` were
+set first (Production only; Preview stays on development) and the function region set to London (`lhr1`). Live check right after
+the deploy: all 10 public pages, `/sitemap.xml` (10 URLs), `/robots.txt` (new rules), the manifest and the calendar file answer 200;
+`/login`, `/register`, `/forgot-password`, `/reset-password`, `/verify-email`, `/book`, `/book/overnight`, `/account`, `/admin`,
+`/two-factor`, `/auth/confirm`, `/api/account/export` and the daily job route answer 404; `/api/me` answers
+`{"signedIn":false,"role":null}` (by design); no Login link in the header; canonical, link-preview and structured data present; no
+prices anywhere. Still not done: part C (production backup and keep-alive), accounts on and the first Admin (part E), part F, G, H.
