@@ -831,3 +831,14 @@ green and `RSF prod keep-alive` up; Backup (production) green, encrypted `.gpg` 
 `HEALTHCHECKS_READ_KEY` (read-only, Secret) and `HEALTHCHECKS_CHECK_NAME` = `RSF prod backup`. Those two take effect at the next
 redeploy (the accounts switch in part E). Not yet proven: a restore of a production backup (part J). Next: part E (accounts on,
 first Admin), then F, G, H, J.
+
+**Part E done (2 November 2026): accounts ON in production, first Admin in place, booking still OFF.** Order followed: Vercel Production
+`NEXT_PUBLIC_ACCOUNTS_ENABLED=true`, redeploy (fresh build); live check (sign-in pages 200 and noindex, private pages show only a
+loading frame then go to `/login` with no private data, daily job 401 without its secret); owner registered, verification email
+arrived in the inbox (first real proof of the Gmail sender, Gmail recipient only); owner role set once with
+`supabase/ops/first-admin.sql` in the production SQL Editor (one row, admin, active; this step is not in the website's audit log,
+note: 2 November 2026, first Admin); two-step login set up, recovery codes saved in the password manager and on paper; sign out and
+sign in again asked for the code; check query shows exactly one admin/staff and one account in total; audit log has entries;
+Settings shows booking OFF. Open items noted by the owner: no sign-out button in the header (it is at the bottom of the account
+page; for the later UI/UX review). Still to do: part F (settings), G (domain email and Resend), H (booking on, owner's decision),
+J (restore rehearsal), a second Admin when the owner trusts someone, Yahoo/Outlook delivery test, renew the backup token in about a year.
