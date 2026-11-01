@@ -30,16 +30,20 @@ stays "supporting young people", not "selling services".
   no online donations in Phase 1.
 
 ## PHASE_STATUS: Phase 1 (live on `main`)
-Every page exists and looks finished, but nothing needing an account or a live
-calendar is real yet. Booking, enrollment and consulting UI submit to a simple
-form endpoint that sends an email notification via Resend (no Supabase) for
-manual follow-up.
+Every page exists and looks finished. While accounts are switched off in
+production (`NEXT_PUBLIC_ACCOUNTS_ENABLED` not `true`), nothing needing an account
+or a live calendar is real: booking, enrollment and consulting UI submit to a
+simple form endpoint that sends an email notification via Resend (no Supabase) for
+manual follow-up, and `/login`, `/register`, `/book`, `/account` and `/admin`
+answer "page not found".
 
-## PHASE_STATUS: Phase 2 (authorised on the `phase-2` branch only)
-Phase 2 (accounts, database, booking, admin) may be planned and built on the
-`phase-2` branch only, in the small milestones set out in
-`docs/PHASE2-PLAN.md`, after the owner approves each milestone. Do not start a
-milestone without that approval.
+## PHASE_STATUS: Phase 2 (built on `phase-2`; merged into `main` on 1 November 2026 with accounts OFF)
+The owner approved merging `phase-2` into `main` (part D of
+`docs/PRODUCTION-LAUNCH.md`). The Phase 2 code is therefore on `main`, but it is
+dormant in production until the owner switches accounts on (part E) and, later,
+booking on (part H). New Phase 2 work is still planned and built on the `phase-2`
+branch only, in the small milestones set out in `docs/PHASE2-PLAN.md`, after the
+owner approves each milestone. Do not start a milestone without that approval.
 
 Phase 2 covers:
 - Auth (login/register), user dashboard (My Bookings / My Courses / My Applications)
@@ -51,9 +55,13 @@ Phase 2 covers:
 - Transactional email/SMS flows beyond a basic form notification
 
 **Phase 2 rules**
-- Never commit or push Phase 2 work to `main`. Check `git branch --show-current`
-  before committing; if it is not `phase-2`, stop and ask. `main` stays the
-  Phase 1 site that is deployed.
+- Never commit or push new Phase 2 work straight to `main`. Check
+  `git branch --show-current` before committing; if it is not `phase-2`, stop and
+  ask. Work reaches `main` only by a merge the owner approves in chat, each time.
+  `main` is what Vercel deploys to the live site.
+- Production uses its own Supabase project (`rsf-website-prod`, London). Vercel
+  Preview and local work use the development project. Never mix them, and never
+  run `supabase/tests` against production.
 - Payments are bank transfer only. No Paystack, and no other online payment
   gateway.
 - Never commit secrets or `.env.local`. The website must never collect or store
@@ -65,10 +73,11 @@ never block or force anything. Only an Admin can change `booking_enabled`. The o
 rule that it will not turn on while no bank details are entered. Do not add new locks or required gates.
 Vercel on Pro is not a gate either; the owner upgrades when real customers book and pay.
 
-On `main`, Phase 1 behaviour stays as it is: course "Enroll" buttons show
-"Coming Soon", the course catalog/detail is display-only with no prices, and
-forms send an email notification via Resend. If a task seems to need a Phase 2
-feature while on `main`, stop and ask.
+With accounts off (the production state at the merge), Phase 1 behaviour stays as
+it is: course "Enroll" buttons show "Coming Soon", the course catalog/detail is
+display-only with no prices, and forms send an email notification via Resend. Do
+not turn accounts or booking on, or change production variables, without the
+owner saying so in chat.
 
 ## Logo
 The logo file is at `/public/images/logo.png` and must be used as-is: no
