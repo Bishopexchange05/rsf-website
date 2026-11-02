@@ -39,9 +39,11 @@ answer "page not found".
 
 ## PHASE_STATUS: Phase 2 (built on `phase-2`; merged into `main` on 1 November 2026 with accounts OFF)
 The owner approved merging `phase-2` into `main` (part D of
-`docs/PRODUCTION-LAUNCH.md`). The Phase 2 code is therefore on `main`, but it is
-dormant in production until the owner switches accounts on (part E) and, later,
-booking on (part H). New Phase 2 work is still planned and built on the `phase-2`
+`docs/PRODUCTION-LAUNCH.md`). The Phase 2 code is therefore on `main`. Accounts
+were switched on in production on 1 November 2026 (part E); booking stays off
+until the owner switches it on (part H). The UI rounds 1–3 (account and booking
+redesign, admin Today page, Admin analytics with migration 0016) were merged on
+2 November 2026. New Phase 2 work is still planned and built on the `phase-2`
 branch only, in the small milestones set out in `docs/PHASE2-PLAN.md`, after the
 owner approves each milestone. Do not start a milestone without that approval.
 
