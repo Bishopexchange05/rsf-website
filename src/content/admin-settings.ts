@@ -187,6 +187,21 @@ export const publicInfo = {
   overnightNote: "Overnight stays are for people 18 or over and are approved in person first.",
   book: { label: "Book a desk", href: "/book" },
   halfDayNote: (split: string) => `Half day: morning until ${split}, or afternoon from ${split}.`,
+  intro: "Pay by bank transfer after you book. We hold your desk while you pay.",
+  cards: {
+    hour: { label: "By the hour", unit: "per hour" },
+    half_day: { label: "Half day", unit: "morning or afternoon" },
+    day: { label: "Full day", unit: "per day" },
+    month: { label: "Monthly pass", unit: (days: number) => `for ${days} days` },
+    night: { label: "Overnight", unit: "per night" },
+  },
+  studentTag: (price: string) => `Students ${price}`,
+  comingSoon: "Price coming soon",
+  askUs: "Ask us",
+  openToday: (range: string) => `Open today, ${range}`,
+  closedToday: "Closed today",
+  allHours: "See all opening hours",
+  goodToKnow: "Good to know",
 };
 
 // The launch checklist: advice only, never a lock. The Admin decides when booking goes live.

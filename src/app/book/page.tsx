@@ -13,6 +13,7 @@ import { pass } from "@/content/monthly";
 import { overnight } from "@/content/overnight";
 import { needsTwoFactor, requireUser } from "@/lib/auth";
 import { createBookingAction, createPassAction } from "@/lib/booking-actions";
+import { getBookingConfig } from "@/lib/booking-open";
 import { cn } from "@/lib/cn";
 import { addDays, dayLabel, isIsoDate, lagosDate, lagosHHMM, timeLabel } from "@/lib/lagos";
 import { noIndex } from "@/lib/no-index";
@@ -56,8 +57,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ d
   const { profile } = await requireUser();
   const supabase = await createClient();
 
-  const { data: cfg } = await supabase.rpc("get_booking_config");
-  const config = cfg as Config | null;
+  const config = (await getBookingConfig()) as Config | null;
   if (!config?.booking_enabled) notFound();
   const p = config.prices;
 

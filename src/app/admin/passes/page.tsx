@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AdminShell } from "@/components/admin/AdminShell";
+import { EmptyState } from "@/components/admin/EmptyState";
 import { Card } from "@/components/Card";
 import { myBookings } from "@/content/booking";
 import { passesAdmin } from "@/content/monthly";
@@ -100,7 +101,7 @@ export default async function Page() {
               {g.title} ({g.list.length})
             </h2>
             {g.list.length === 0 ? (
-              <p>{passesAdmin.empty}</p>
+              <EmptyState>{passesAdmin.empty}</EmptyState>
             ) : (
               <ul className="space-y-3">
                 {g.list.map((r) => {

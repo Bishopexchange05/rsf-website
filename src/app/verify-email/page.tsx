@@ -8,7 +8,7 @@ import { noIndex } from "@/lib/no-index";
 import { readPendingEmail } from "@/lib/pending-email";
 import { accountsEnabled } from "@/lib/supabase/config";
 
-export const metadata: Metadata = { title: verifyEmail.title, ...noIndex };
+export const metadata: Metadata = { title: verifyEmail.title, description: verifyEmail.textNoEmail, ...noIndex };
 
 export default async function Page() {
   if (!accountsEnabled) notFound();

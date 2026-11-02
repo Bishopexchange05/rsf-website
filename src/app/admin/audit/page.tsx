@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AdminShell } from "@/components/admin/AdminShell";
+import { EmptyState } from "@/components/admin/EmptyState";
 import { auditLog } from "@/content/accounts";
 import { requireRole } from "@/lib/auth";
 import { noIndex } from "@/lib/no-index";
@@ -73,7 +74,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ a
       </nav>
 
       {entries.length === 0 ? (
-        <p>{auditLog.empty}</p>
+        <EmptyState>{auditLog.empty}</EmptyState>
       ) : (
         <div className="overflow-x-auto rounded-2xl bg-white shadow-sm dark:bg-dark-card">
           <table className="w-full min-w-[40rem] text-left text-sm">

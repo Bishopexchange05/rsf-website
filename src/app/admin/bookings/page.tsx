@@ -3,6 +3,7 @@ import Form from "next/form";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AdminShell } from "@/components/admin/AdminShell";
+import { EmptyState } from "@/components/admin/EmptyState";
 import { Card } from "@/components/Card";
 import { myBookings } from "@/content/booking";
 import { bookingsAdmin } from "@/content/payments";
@@ -115,7 +116,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ q
       </nav>
 
       {rows.length === 0 ? (
-        <p>{bookingsAdmin.empty}</p>
+        <EmptyState>{bookingsAdmin.empty}</EmptyState>
       ) : (
         <ul className="space-y-3">
           {rows.map((r) => {

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AdminShell } from "@/components/admin/AdminShell";
+import { EmptyState } from "@/components/admin/EmptyState";
 import { RequestDecision } from "@/components/admin/RequestDecision";
 import { Card } from "@/components/Card";
 import { requestWhatsappMessage, requestsAdmin } from "@/content/overnight";
@@ -52,7 +53,7 @@ export default async function Page() {
   return (
     <AdminShell heading={requestsAdmin.heading} text={requestsAdmin.text} isAdmin={profile.role === "admin"}>
       {rows.length === 0 ? (
-        <p>{requestsAdmin.empty}</p>
+        <EmptyState>{requestsAdmin.empty}</EmptyState>
       ) : (
         <ul className="space-y-5">
           {rows.map((r) => {

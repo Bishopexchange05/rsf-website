@@ -11,6 +11,7 @@ import { overnight, overnightErrors } from "@/content/overnight";
 import { needsTwoFactor, requireUser } from "@/lib/auth";
 import { requestOvernightAction } from "@/lib/booking-actions";
 import { addDays, dayLabel, isIsoDate, lagosDate, timeLabel } from "@/lib/lagos";
+import { getBookingConfig } from "@/lib/booking-open";
 import { noIndex } from "@/lib/no-index";
 import { formatNaira, parseIntIn } from "@/lib/settings-validation";
 import { accountsEnabled } from "@/lib/supabase/config";
@@ -33,7 +34,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ c
   const staff = needsTwoFactor(profile.role);
   const supabase = await createClient();
 
-  const { data: cfg } = await supabase.rpc("get_booking_config");
+  const cfg = await getBookingConfig();
   const config = cfg as Config | null;
   if (!config?.booking_enabled) notFound();
   const on = config.overnight;

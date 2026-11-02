@@ -858,3 +858,20 @@ booking, Copy and Cancel through the new pages on the development database (emai
 light and dark. Not changed (noticed): after Cancel the earlier "desk is held" line stays until reload (was the same before).
 Local note: Avast's web shield blocks the local server's secure connection to Supabase unless Node uses the Windows certificate
 store (`NODE_USE_SYSTEM_CA=1` / `--use-system-ca`); the live site is not affected.
+
+**Tech & Space prices, admin frame and Today page, speed and security fixes (2 November 2026), approved by the owner; built on
+`phase-2`, NOT merged.** Tech & Space (only while booking is on): the two "receipt" boxes became price cards (big price, short
+unit, a "Students ₦…" tag; an option without a price shows a dashed "Price coming soon" card with Ask us and WhatsApp links), an
+"Open today" line with the full week folded behind "See all opening hours", and a "Good to know" list; the extra Book button in
+the price box is gone (the Day and Overnight cards keep theirs). Honest note: on a phone the section is about as long as before
+(2,730 px vs 2,700), easier to read but not shorter. Admin: the same slim banner and folder tab bar as the account area (scrolls
+sideways on phones; Staff see Today, Payments, Bookings, Monthly passes, Overnight requests; Admins also People, Settings, Audit
+log, Email health); the front page is now "Today": tiles for payments to check, overnight requests, refunds owed and passes ending
+in 5 days (red outline when something is waiting, "All clear" otherwise), "Coming in today" (confirmed bookings for today), and for
+Admins only the booking switch status and launch checklist count with a link to Settings; friendly empty-state boxes on seven admin
+lists. Speed and security: the booking settings are read once per page request (Book a desk, overnight and booking pages used to
+ask twice), browser security headers on every page (X-Frame-Options DENY, nosniff, strict-origin-when-cross-origin, camera,
+microphone and location off), descriptions on the sign-in pages, and the image quality setting Next.js 16 will require. Measured
+(Lighthouse, phone, calibrated, local copy against the development database): Tech & Space 93, Book a desk 76 (was 72), Overview
+83, login 93; accessibility and best practices 100 on all. Login still shows "no description" in Lighthouse because Next.js places
+the description later in the page for ordinary browsers on per-visit pages; search engines get it, and login is not indexed.

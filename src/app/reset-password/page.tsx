@@ -8,7 +8,7 @@ import { noIndex } from "@/lib/no-index";
 import { accountsEnabled } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
 
-export const metadata: Metadata = { title: reset.title, ...noIndex };
+export const metadata: Metadata = { title: reset.title, description: reset.text, ...noIndex };
 
 export default async function Page() {
   if (!accountsEnabled) notFound();

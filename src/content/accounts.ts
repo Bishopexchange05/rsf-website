@@ -211,6 +211,31 @@ export const admin = {
     { label: "Audit log", href: "/admin/audit", text: "A permanent record of what Admins and Staff have done." },
     { label: "Email health", href: "/admin/email", text: "How many emails the site sent and whether any failed." },
   ],
+  nav: { today: "Today", ariaLabel: "Admin menu", back: { label: "Your account", href: "/account" } },
+};
+
+// The admin front page ("Today").
+export const adminHome = {
+  hello: (firstName: string) => (firstName ? `Good to see you, ${firstName}` : "Today"),
+  text: "What needs attention, and who is coming in today.",
+  needsHeading: "Needs attention",
+  allClear: "All clear",
+  tiles: {
+    payments: { label: "Payments to check", href: "/admin/payments" },
+    requests: { label: "Overnight requests waiting", href: "/admin/overnight" },
+    refunds: { label: "Refunds owed", href: "/admin/bookings?view=refunds" },
+    passes: { label: "Monthly passes ending in 5 days", href: "/admin/passes" },
+  },
+  todayHeading: "Coming in today",
+  todayNone: "No confirmed bookings for today.",
+  todayAll: { label: "See all bookings", href: "/admin/bookings" },
+  passesToday: (n: number) => (n === 1 ? "1 monthly pass holder can also come in today." : `${n} monthly pass holders can also come in today.`),
+  bookingHeading: "Online booking",
+  bookingOn: "Booking is ON. Members can book and pay by bank transfer.",
+  bookingOff: "Booking is OFF. The site shows request forms instead.",
+  checklistOpen: (n: number) => (n === 1 ? "1 item on the launch checklist is still open (advice only)." : `${n} items on the launch checklist are still open (advice only).`),
+  checklistDone: "The launch checklist looks ready.",
+  settingsLink: { label: "Open Settings", href: "/admin/settings" },
 };
 
 export const twoFactor = {

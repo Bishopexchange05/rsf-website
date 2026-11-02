@@ -3,6 +3,7 @@ import Form from "next/form";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AdminShell } from "@/components/admin/AdminShell";
+import { EmptyState } from "@/components/admin/EmptyState";
 import { Card } from "@/components/Card";
 import { adminUsers } from "@/content/accounts";
 import { resetMfaAction, setActiveAction, setRoleAction } from "@/lib/admin-actions";
@@ -82,7 +83,7 @@ export default async function Page({
       </Form>
 
       {rows.length === 0 ? (
-        <p>{adminUsers.empty}</p>
+        <EmptyState>{adminUsers.empty}</EmptyState>
       ) : (
         <ul className="space-y-4">
           {rows.map((r) => {

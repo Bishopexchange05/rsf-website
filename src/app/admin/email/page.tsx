@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { AdminShell } from "@/components/admin/AdminShell";
+import { EmptyState } from "@/components/admin/EmptyState";
 import { Card } from "@/components/Card";
 import { emailHealth } from "@/content/accounts";
 import { requireRole } from "@/lib/auth";
@@ -68,7 +69,7 @@ export default async function Page() {
 
       <h2 className="mt-10 text-h3">{emailHealth.tableHeading}</h2>
       {days.length === 0 ? (
-        <p className="mt-3">{emailHealth.empty}</p>
+        <EmptyState className="mt-3">{emailHealth.empty}</EmptyState>
       ) : (
         <div className="mt-3 overflow-x-auto rounded-2xl bg-white shadow-sm dark:bg-dark-card">
           <table className="w-full text-left text-sm">

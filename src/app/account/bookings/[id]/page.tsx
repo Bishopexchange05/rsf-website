@@ -18,6 +18,7 @@ import { site } from "@/content/site";
 import { needsTwoFactor, requireUser } from "@/lib/auth";
 import { cancelBookingAction, renewPassAction } from "@/lib/booking-actions";
 import { bookingWhen, dateTimeLabel, lagosDate, timeLabel } from "@/lib/lagos";
+import { getBookingConfig } from "@/lib/booking-open";
 import { noIndex } from "@/lib/no-index";
 import { claimPaymentAction } from "@/lib/payment-actions";
 import { formatNaira } from "@/lib/settings-validation";
@@ -102,7 +103,7 @@ export default async function Page({
   let cutoffHours: number | null = null;
   let renewOpen = false;
   if (isPass) {
-    const { data: cfg } = await supabase.rpc("get_booking_config");
+    const cfg = await getBookingConfig();
     const c = cfg as { monthly_self_cancel_cutoff_hours?: number; monthly_start_window_days?: number } | null;
     cutoffHours = c?.monthly_self_cancel_cutoff_hours ?? null;
     if (status === "confirmed" && c?.monthly_start_window_days !== undefined) {

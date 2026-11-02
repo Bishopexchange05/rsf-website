@@ -8,7 +8,7 @@ import { getSession } from "@/lib/auth";
 import { noIndex } from "@/lib/no-index";
 import { accountsEnabled } from "@/lib/supabase/config";
 
-export const metadata: Metadata = { title: login.title, ...noIndex };
+export const metadata: Metadata = { title: login.title, description: login.text, ...noIndex };
 
 export default async function Page({ searchParams }: { searchParams: Promise<{ notice?: string }> }) {
   if (!accountsEnabled) notFound();

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AdminShell } from "@/components/admin/AdminShell";
+import { EmptyState } from "@/components/admin/EmptyState";
 import { PaymentDecision } from "@/components/admin/PaymentDecision";
 import { Card } from "@/components/Card";
 import { myBookings } from "@/content/booking";
@@ -52,7 +53,7 @@ export default async function Page() {
   return (
     <AdminShell heading={queue.heading} text={queue.text} isAdmin={profile.role === "admin"}>
       {rows.length === 0 ? (
-        <p>{queue.empty}</p>
+        <EmptyState>{queue.empty}</EmptyState>
       ) : (
         <ul className="space-y-5">
           {rows.map(({ r, pay, who }) => {

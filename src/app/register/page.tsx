@@ -8,7 +8,7 @@ import { getSession } from "@/lib/auth";
 import { noIndex } from "@/lib/no-index";
 import { accountsEnabled } from "@/lib/supabase/config";
 
-export const metadata: Metadata = { title: register.title, ...noIndex };
+export const metadata: Metadata = { title: register.title, description: register.text, ...noIndex };
 
 export default async function Page() {
   if (!accountsEnabled) notFound();

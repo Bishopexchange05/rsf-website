@@ -7,7 +7,7 @@ import { forgot } from "@/content/accounts";
 import { noIndex } from "@/lib/no-index";
 import { accountsEnabled } from "@/lib/supabase/config";
 
-export const metadata: Metadata = { title: forgot.title, ...noIndex };
+export const metadata: Metadata = { title: forgot.title, description: forgot.text, ...noIndex };
 
 export default function Page() {
   if (!accountsEnabled) notFound();
