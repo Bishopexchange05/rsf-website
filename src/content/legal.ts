@@ -122,7 +122,7 @@ export const privacy: LegalPageData = {
       ...(ACCOUNTS_ON ? [privacyLoginCookie] : []),
     ),
     p(
-      "We do not use advertising or tracking cookies. If we add website analytics in future, we will update this policy and ask for your consent where the law requires it.",
+      "We do not use advertising or tracking cookies. To see which pages are useful, we count how many times each page is viewed. This count uses no cookie and stores nothing about you: only the date, the page and the number of views.",
     ),
     h2("Your rights"),
     p(

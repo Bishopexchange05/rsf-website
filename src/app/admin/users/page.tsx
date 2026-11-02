@@ -4,7 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { EmptyState } from "@/components/admin/EmptyState";
-import { Card } from "@/components/Card";
+import { Panel } from "@/components/Panel";
 import { adminUsers } from "@/content/accounts";
 import { resetMfaAction, setActiveAction, setRoleAction } from "@/lib/admin-actions";
 import { requireRole } from "@/lib/auth";
@@ -91,7 +91,7 @@ export default async function Page({
             const privileged = r.role === "staff" || r.role === "admin";
             return (
               <li key={r.id}>
-                <Card>
+                <Panel>
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="min-w-0">
                       <h2 className="text-h3 break-words">
@@ -164,7 +164,7 @@ export default async function Page({
                       )}
                     </div>
                   )}
-                </Card>
+                </Panel>
               </li>
             );
           })}

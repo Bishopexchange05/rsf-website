@@ -201,7 +201,7 @@ export const publicInfo = {
   openToday: (range: string) => `Open today, ${range}`,
   closedToday: "Closed today",
   allHours: "See all opening hours",
-  goodToKnow: "Good to know",
+  goodToKnow: "Before you book",
 };
 
 // The launch checklist: advice only, never a lock. The Admin decides when booking goes live.

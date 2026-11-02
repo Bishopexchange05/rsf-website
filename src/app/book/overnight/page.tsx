@@ -4,7 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ActionForm } from "@/components/ActionForm";
 import { BookingShell, bookButton, bookInput } from "@/components/booking/BookingShell";
-import { Card } from "@/components/Card";
+import { Panel } from "@/components/Panel";
 import { PendingButton } from "@/components/PendingButton";
 import { errors as bookErrors } from "@/content/booking";
 import { overnight, overnightErrors } from "@/content/overnight";
@@ -44,9 +44,9 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ c
   if (!on?.enabled) {
     return (
       <BookingShell heading={overnight.heading} text={overnight.text} staff={staff}>
-        <Card>
+        <Panel>
           <p>{overnight.closed}</p>
-        </Card>
+        </Panel>
         <p className="mt-6 text-sm">
           <Link href={overnight.back.href} className="font-medium underline underline-offset-2">
             {overnight.back.label}
@@ -72,16 +72,16 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ c
 
   return (
     <BookingShell heading={overnight.heading} text={overnight.text} staff={staff}>
-      <Card className="mb-6">
+      <Panel className="mb-6">
         <h2 className="text-h3">{overnight.steps.heading}</h2>
         <ol className="mt-3 list-decimal space-y-2 pl-5">
           {overnight.steps.list.map((s) => (
             <li key={s}>{s}</li>
           ))}
         </ol>
-      </Card>
+      </Panel>
 
-      <Card>
+      <Panel>
         <Form action="/book/overnight" className="flex flex-wrap items-end gap-3">
           <div>
             <label htmlFor="checkin" className="mb-1.5 block text-sm font-semibold">
@@ -135,7 +135,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ c
             </p>
           )
         )}
-      </Card>
+      </Panel>
 
       <p className="mt-6 text-sm">
         <Link href={overnight.back.href} className="inline-flex min-h-11 items-center font-medium underline underline-offset-2">

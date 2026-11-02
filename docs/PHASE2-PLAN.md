@@ -875,3 +875,23 @@ microphone and location off), descriptions on the sign-in pages, and the image q
 (Lighthouse, phone, calibrated, local copy against the development database): Tech & Space 93, Book a desk 76 (was 72), Overview
 83, login 93; accessibility and best practices 100 on all. Login still shows "no description" in Lighthouse because Next.js places
 the description later in the page for ordinary browsers on per-visit pages; search engines get it, and login is not indexed.
+
+**Analytics, visit counter, hero crop and de-template polish (2 November 2026), approved by the owner; built on `phase-2`,
+NOT merged.** Owner's choices: own cookie-free visit counter, an Analytics tab plus a summary on Today, Admins only, plus the hero
+crop fix and the polish pass. Migration `0016_site_visits_and_analytics.sql` (additive): `site_visits` (one row per day and page,
+views and visits only, nothing about the visitor), `record_site_visit` (server key only) and `admin_analytics(from, to)` (Admin with
+two-step only, at most about 13 months). **Note: on 2 November 2026 the owner ran 0016 on PRODUCTION first by mistake (the two
+projects look alike), then on development. Harmless: additive, unused by the live site until the merge, and needed there anyway.**
+Website: `/api/pv` counts a page view after load (sendBeacon), skips robots and private pages (account, admin, booking, sign-in);
+the Privacy Policy cookie paragraph now says so (lawyer pack F8b, Medium). Admin: new Analytics tab (7 days, 30 days, 12 whole
+calendar months): money received, bookings made, new members and visits with change on the previous period; right-now totals;
+visits and money line charts (separate, one axis each); booking mix ring (4 parts); busiest weekdays and start times; busiest
+day, week and month over the last 12 months; most viewed pages by name; every chart has "See the numbers". Charts are drawn
+without a library, at their real width (readable on phones), with hover and keyboard read-outs; brand colours were checked for
+colour-blind separation (pass), but navy and purple are darker than the ideal chart band and green is light on white, so every
+segment carries a visible label and number. Today page (Admins): "This month so far" strip. Hero: on phones the photo is cropped
+towards the person and the overlay is lighter at the top. Polish: account, booking and admin pages use a bordered panel instead of
+soft shadow cards, solid navy banner with the leaf-vein mark instead of the gradient and the repeated green label, plainer wording
+(account heading is the member's name; admin "Today" with the date; "Waiting on you", "Nothing waiting", "Before you book"),
+admin Bookings and "Coming in today" as tables, no decorative ticks or dashed boxes. Test: `supabase/tests/analytics.js` 12/12 on
+development (after the run on dev). Sample figures for the review are on development only and will be removed.

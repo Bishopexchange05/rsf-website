@@ -5,7 +5,7 @@ import { AccountShell } from "@/components/account/AccountShell";
 import { bookButton, bookOutline } from "@/components/booking/buttonClasses";
 import { HoldCountdown } from "@/components/booking/HoldCountdown";
 import { StatusChip } from "@/components/booking/StatusChip";
-import { Card } from "@/components/Card";
+import { Panel } from "@/components/Panel";
 import { account, accountNav, overview } from "@/content/accounts";
 import { myBookings } from "@/content/booking";
 import { needsTwoFactor, requireUser } from "@/lib/auth";
@@ -34,10 +34,9 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ n
   const now = Date.now();
   const { upcoming } = splitBookings((data as MyBooking[] | null) ?? [], now);
   const [next, ...rest] = upcoming;
-  const firstName = profile.full_name.trim().split(/\s+/)[0] ?? "";
 
   return (
-    <AccountShell active="overview" heading={overview.hello(firstName)} text={open ? overview.textOpen : overview.textClosed} staff={staff} wide>
+    <AccountShell active="overview" heading={overview.hello(profile.full_name.trim())} text={open ? overview.textOpen : overview.textClosed} staff={staff} wide>
       {message && (
         <p role="status" className="mb-6 rounded-xl bg-brand-green/15 p-3 text-sm font-medium dark:text-dark-green">
           {message}
@@ -45,7 +44,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ n
       )}
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
-          <Card className="p-6 sm:p-8">
+          <Panel className="p-6 sm:p-8">
             <h2 className="text-h3">{overview.nextHeading}</h2>
             {next ? (
               <div className="mt-5">
@@ -60,7 +59,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ n
                   <StatusChip status={shownStatus(next, now)} />
                 </div>
                 {needsPayment(next, now) && next.hold_expires_at ? (
-                  <div className="mt-6 flex flex-col gap-4 rounded-2xl bg-cream p-4 dark:bg-dark-bg sm:flex-row sm:items-center sm:justify-between">
+                  <div className="mt-6 flex flex-col gap-4 rounded-xl bg-cream p-4 dark:bg-dark-bg sm:flex-row sm:items-center sm:justify-between">
                     <p>
                       <span className="block text-sm font-semibold">{overview.payBy}</span>
                       <HoldCountdown expiresAt={next.hold_expires_at} />
@@ -87,10 +86,10 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ n
                 )}
               </div>
             )}
-          </Card>
+          </Panel>
 
           {rest.length > 0 && (
-            <Card className="p-6 sm:p-8">
+            <Panel className="p-6 sm:p-8">
               <h2 className="text-h3">{overview.comingUpHeading}</h2>
               <ul className="mt-4 divide-y divide-slate-navy/10 dark:divide-white/10">
                 {rest.slice(0, 3).map((b) => (
@@ -110,12 +109,12 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ n
                   {overview.allBookings}
                 </Link>
               </p>
-            </Card>
+            </Panel>
           )}
         </div>
 
         <div className="space-y-6">
-          <Card className="p-6">
+          <Panel className="p-6">
             <h2 className="text-h3">{overview.quickHeading}</h2>
             <div className="mt-4 flex flex-col gap-3">
               {open && (
@@ -135,9 +134,9 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ n
                 </Link>
               )}
             </div>
-          </Card>
+          </Panel>
 
-          <Card className="p-6">
+          <Panel className="p-6">
             <h2 className="text-h3">{overview.youHeading}</h2>
             <dl className="mt-4 space-y-3 text-sm">
               <div>
@@ -154,7 +153,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ n
                 {overview.editDetails}
               </Link>
             </p>
-          </Card>
+          </Panel>
         </div>
       </div>
     </AccountShell>

@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { EmptyState } from "@/components/admin/EmptyState";
 import { RequestDecision } from "@/components/admin/RequestDecision";
-import { Card } from "@/components/Card";
+import { Panel } from "@/components/Panel";
 import { requestWhatsappMessage, requestsAdmin } from "@/content/overnight";
 import { requireRole } from "@/lib/auth";
 import { bookingWhen, dateTimeLabel } from "@/lib/lagos";
@@ -63,7 +63,7 @@ export default async function Page() {
             const expiresSoon = r.hold_expires_at ? new Date(r.hold_expires_at).getTime() < soon : false;
             return (
               <li key={r.id}>
-                <Card>
+                <Panel>
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
                       <h2 className="font-mono text-xl font-semibold">{r.reference}</h2>
@@ -108,7 +108,7 @@ export default async function Page() {
                       {requestsAdmin.open}
                     </Link>
                   </p>
-                </Card>
+                </Panel>
               </li>
             );
           })}

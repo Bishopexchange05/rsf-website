@@ -4,7 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { EmptyState } from "@/components/admin/EmptyState";
-import { Card } from "@/components/Card";
+import { StatusChip } from "@/components/booking/StatusChip";
 import { myBookings } from "@/content/booking";
 import { bookingsAdmin } from "@/content/payments";
 import { requireRole } from "@/lib/auth";
@@ -118,38 +118,56 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ q
       {rows.length === 0 ? (
         <EmptyState>{bookingsAdmin.empty}</EmptyState>
       ) : (
-        <ul className="space-y-3">
-          {rows.map((r) => {
-            const who = one(r.profiles);
-            const lapsed = r.status === "pending_payment" && r.hold_expires_at && new Date(r.hold_expires_at).getTime() <= now;
-            const status = lapsed ? "expired" : r.status;
-            return (
-              <li key={r.id}>
-                <Card>
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="font-mono text-lg font-semibold">{r.reference}</p>
-                      <p className="text-sm">{who ? `${who.full_name}, ${who.phone}` : "—"}</p>
-                      <p className="text-sm opacity-85">
-                        {myBookings.kinds[r.kind] ?? r.kind}: {bookingWhen(r)} · {formatNaira(r.amount_kobo)}
-                      </p>
-                    </div>
-                    <ul className="flex flex-wrap gap-2 text-xs font-semibold">
-                      <li className="rounded-full bg-navy px-3 py-1 text-white dark:bg-white/15">{myBookings.statuses[status] ?? status}</li>
-                      {r.refund_owed && !r.refund_done_at && <li className="rounded-full bg-accent-red px-3 py-1 text-white">{bookingsAdmin.refundBadge}</li>}
-                      {r.refund_owed && r.refund_done_at && <li className="rounded-full bg-brand-green/30 px-3 py-1">{bookingsAdmin.refundedBadge}</li>}
-                    </ul>
-                  </div>
-                  <p className="mt-3">
-                    <Link href={`/admin/bookings/${r.id}`} className={smallButton}>
-                      {bookingsAdmin.open}
-                    </Link>
-                  </p>
-                </Card>
-              </li>
-            );
-          })}
-        </ul>
+        <div className="overflow-x-auto rounded-xl border border-slate-navy/10 bg-white dark:border-white/10 dark:bg-dark-card">
+          <table className="w-full min-w-[720px] text-left text-sm">
+            <thead className="border-b border-slate-navy/10 bg-cream/60 text-xs uppercase tracking-wide dark:border-white/10 dark:bg-white/5">
+              <tr>
+                {[bookingsAdmin.columns.reference, bookingsAdmin.columns.customer, bookingsAdmin.columns.when, bookingsAdmin.columns.amount, bookingsAdmin.columns.status, ""].map((c) => (
+                  <th key={c} scope="col" className="px-4 py-3 font-semibold">
+                    {c}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-navy/10 dark:divide-white/10">
+              {rows.map((r) => {
+                const who = one(r.profiles);
+                const lapsed = r.status === "pending_payment" && r.hold_expires_at && new Date(r.hold_expires_at).getTime() <= now;
+                const status = lapsed ? "expired" : r.status;
+                return (
+                  <tr key={r.id} className="align-top hover:bg-cream/50 dark:hover:bg-white/5">
+                    <td className="px-4 py-3 font-mono font-semibold">{r.reference}</td>
+                    <td className="px-4 py-3">
+                      {who ? (
+                        <>
+                          <span className="block font-semibold">{who.full_name}</span>
+                          <span className="block opacity-75">{who.phone}</span>
+                        </>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="block font-semibold">{myBookings.kinds[r.kind] ?? r.kind}</span>
+                      <span className="block opacity-75">{bookingWhen(r)}</span>
+                    </td>
+                    <td className="px-4 py-3 text-right tabular-nums">{formatNaira(r.amount_kobo)}</td>
+                    <td className="px-4 py-3">
+                      <StatusChip status={status} />
+                      {r.refund_owed && !r.refund_done_at && <span className="mt-1 block text-xs font-semibold text-accent-red dark:text-red-300">{bookingsAdmin.refundBadge}</span>}
+                      {r.refund_owed && r.refund_done_at && <span className="mt-1 block text-xs font-semibold opacity-75">{bookingsAdmin.refundedBadge}</span>}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <Link href={`/admin/bookings/${r.id}`} className="inline-flex min-h-11 items-center font-semibold text-navy underline underline-offset-2 dark:text-dark-link">
+                        {bookingsAdmin.open}
+                      </Link>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       )}
       <p className="mt-4 text-sm opacity-75">{bookingsAdmin.limitNote}</p>
     </AdminShell>

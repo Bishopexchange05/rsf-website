@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { BookingShell, bookButton } from "@/components/booking/BookingShell";
 import { HoldCountdown } from "@/components/booking/HoldCountdown";
 import { StatusChip } from "@/components/booking/StatusChip";
-import { Card } from "@/components/Card";
+import { Panel } from "@/components/Panel";
 import { accountNav } from "@/content/accounts";
 import { myBookings } from "@/content/booking";
 import { needsTwoFactor, requireUser } from "@/lib/auth";
@@ -37,7 +37,7 @@ export default async function Page() {
       <li key={b.id}>
         <Link
           href={`/account/bookings/${b.id}`}
-          className="block rounded-2xl bg-white p-5 shadow-sm ring-navy/30 transition hover:-translate-y-0.5 hover:shadow-md focus-visible:ring-2 dark:bg-dark-card motion-reduce:transform-none sm:p-6"
+          className="block rounded-xl border border-slate-navy/10 bg-white p-5 ring-navy/30 dark:border-white/10 transition hover:border-navy/40 dark:hover:border-dark-green/50 focus-visible:ring-2 dark:bg-dark-card sm:p-6"
         >
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0">
@@ -65,7 +65,7 @@ export default async function Page() {
   return (
     <BookingShell active="bookings" heading={myBookings.heading} text={myBookings.text} staff={needsTwoFactor(profile.role)}>
       {rows.length === 0 ? (
-        <Card className="p-6 sm:p-8">
+        <Panel className="p-6 sm:p-8">
           <p>{myBookings.empty}</p>
           {open && (
             <p className="mt-5">
@@ -74,7 +74,7 @@ export default async function Page() {
               </Link>
             </p>
           )}
-        </Card>
+        </Panel>
       ) : (
         <div className="space-y-10">
           <section aria-labelledby="upcoming">

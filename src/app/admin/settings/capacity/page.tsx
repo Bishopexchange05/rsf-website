@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { SettingsFrame, adminButton, adminInput } from "@/components/admin/SettingsFrame";
-import { Card } from "@/components/Card";
+import { Panel } from "@/components/Panel";
 import { capacityPage, errors, notices } from "@/content/admin-settings";
 import { requireRole } from "@/lib/auth";
 import { noIndex } from "@/lib/no-index";
@@ -27,7 +27,7 @@ export default async function Page() {
   return (
     <SettingsFrame heading={capacityPage.heading} text={capacityPage.text}>
       <ActionForm action={saveCapacityAction} notices={notices} errors={errors} className="space-y-4">
-        <Card>
+        <Panel>
           <label htmlFor="day_capacity" className="mb-1.5 block text-sm font-semibold">
             {capacityPage.dayLabel}
           </label>
@@ -37,8 +37,8 @@ export default async function Page() {
             <input type="checkbox" name="day_bookable" defaultChecked={day?.is_bookable} className="h-5 w-5 accent-navy" />
             {capacityPage.bookable}
           </label>
-        </Card>
-        <Card>
+        </Panel>
+        <Panel>
           <label htmlFor="overnight_capacity" className="mb-1.5 block text-sm font-semibold">
             {capacityPage.overnightLabel}
           </label>
@@ -48,7 +48,7 @@ export default async function Page() {
             <input type="checkbox" name="overnight_bookable" defaultChecked={overnight?.is_bookable} className="h-5 w-5 accent-navy" />
             {capacityPage.bookable}
           </label>
-        </Card>
+        </Panel>
         <p className="text-sm opacity-85">{capacityPage.lowerWarning}</p>
         <PendingButton className={adminButton}>
           {capacityPage.save}

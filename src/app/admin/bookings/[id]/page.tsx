@@ -5,7 +5,7 @@ import { ActionForm } from "@/components/ActionForm";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { PaymentDecision } from "@/components/admin/PaymentDecision";
 import { ReasonPicker } from "@/components/admin/ReasonPicker";
-import { Card } from "@/components/Card";
+import { Panel } from "@/components/Panel";
 import { PendingButton } from "@/components/PendingButton";
 import { myBookings } from "@/content/booking";
 import { passAdminDetail } from "@/content/monthly";
@@ -104,7 +104,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
 
   return (
     <AdminShell heading={bookingDetail.heading} text={b.reference} isAdmin={isAdmin}>
-      <Card>
+      <Panel>
         <dl className="space-y-2">
           <div className="flex flex-wrap justify-between gap-x-4">
             <dt className="font-semibold">{bookingDetail.reference}</dt>
@@ -154,10 +154,10 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
             </a>
           </p>
         )}
-      </Card>
+      </Panel>
 
       {pay && (
-        <Card className="mt-6">
+        <Panel className="mt-6">
           <h2 className="text-h3">{bookingDetail.payment}</h2>
           <dl className="mt-3 space-y-1 text-sm">
             <div>
@@ -187,10 +187,10 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
               </div>
             )}
           </dl>
-        </Card>
+        </Panel>
       )}
 
-      <Card className="mt-6">
+      <Panel className="mt-6">
         <h2 className="text-h3">{bookingDetail.actions}</h2>
         <div className="mt-4 space-y-6">
           {b.kind === "night" && status === "pending_approval" && !lapsed && <RequestDecision bookingId={b.id} />}
@@ -272,10 +272,10 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
             </details>
           )}
         </div>
-      </Card>
+      </Panel>
 
       {b.refund_owed && (
-        <Card className="mt-6">
+        <Panel className="mt-6">
           <h2 className="text-h3">{bookingDetail.refundHeading}</h2>
           {b.refund_done_at ? (
             <p className="mt-3">
@@ -306,10 +306,10 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
               )}
             </>
           )}
-        </Card>
+        </Panel>
       )}
 
-      <Card className="mt-6">
+      <Panel className="mt-6">
         <h2 className="text-h3">{bookingDetail.timeline}</h2>
         <ol className="mt-3 space-y-3 text-sm">
           {events.map((e) => (
@@ -322,7 +322,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
             </li>
           ))}
         </ol>
-      </Card>
+      </Panel>
 
       <p className="mt-6 text-sm">
         <Link href={bookingDetail.back.href} className="font-medium underline underline-offset-2">

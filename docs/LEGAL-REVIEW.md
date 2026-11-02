@@ -249,7 +249,7 @@ This website uses only what it needs to work:
 - A small stored setting that remembers your light or dark display choice.
 - A sign-in cookie, set only when you log in, that keeps you signed in. It is needed for your account to work.
 
-We do not use advertising or tracking cookies. If we add website analytics in future, we will update this policy and ask for your consent where the law requires it.
+We do not use advertising or tracking cookies. To see which pages are useful, we count how many times each page is viewed. This count uses no cookie and stores nothing about you: only the date, the page and the number of views.
 
 ## Your rights
 

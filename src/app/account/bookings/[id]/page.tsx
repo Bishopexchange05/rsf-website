@@ -7,7 +7,7 @@ import { CopyButton } from "@/components/booking/CopyButton";
 import { HoldCountdown } from "@/components/booking/HoldCountdown";
 import { ProgressSteps, progressFor } from "@/components/booking/ProgressSteps";
 import { StatusChip } from "@/components/booking/StatusChip";
-import { Card } from "@/components/Card";
+import { Panel } from "@/components/Panel";
 import { PendingButton } from "@/components/PendingButton";
 import { common } from "@/content/accounts";
 import { bookingPage, errors as bookingErrors, myBookings, notices as bookingNotices } from "@/content/booking";
@@ -117,13 +117,13 @@ export default async function Page({
   return (
     <BookingShell active="bookings" heading={bookingPage.heading} text={myBookings.kinds[b.kind] ?? b.kind} notice={notice} staff={needsTwoFactor(profile.role)} wide>
       {progress && (
-        <Card className="mb-6 px-4 py-5 sm:px-8">
+        <Panel className="mb-6 px-4 py-5 sm:px-8">
           <ProgressSteps steps={progress.steps} done={progress.done} />
-        </Card>
+        </Panel>
       )}
       <div className="grid items-start gap-6 lg:grid-cols-5 lg:grid-rows-[auto_1fr]">
       <div className="space-y-6 lg:col-span-2 lg:col-start-4 lg:row-start-1">
-      <Card>
+      <Panel>
         <dl className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
             <dt className="font-semibold">{bookingPage.status}</dt>
@@ -153,17 +153,17 @@ export default async function Page({
             {status === "pending_payment" && <p>{passBooking.moved}</p>}
           </div>
         )}
-      </Card>
+      </Panel>
 
       </div>
 
       <div className="space-y-6 lg:col-span-3 lg:col-start-1 lg:row-span-2 lg:row-start-1">
       {needsPayment && (
-        <Card className="p-6 sm:p-8">
+        <Panel className="p-6 sm:p-8">
           <h2 className="text-h3">{bookingPage.pay.heading}</h2>
           <p className="mt-2">{bookingPage.pay.intro}</p>
           {pay && pay.hold_expires_at && (
-            <p className="mt-5 flex flex-wrap items-baseline justify-between gap-2 rounded-2xl border-2 border-accent-red/30 bg-accent-red/5 px-4 py-3 dark:border-red-300/30">
+            <p className="mt-5 flex flex-wrap items-baseline justify-between gap-2 rounded-xl border-2 border-accent-red/30 bg-accent-red/5 px-4 py-3 dark:border-red-300/30">
               <span className="font-semibold">{bookingPage.pay.timeLeft}</span>
               <span className="text-2xl">
                 <HoldCountdown expiresAt={pay.hold_expires_at} />
@@ -171,7 +171,7 @@ export default async function Page({
             </p>
           )}
           {pay && pay.bank_name && pay.account_number && pay.account_name ? (
-            <dl className="mt-5 divide-y divide-slate-navy/10 rounded-2xl bg-cream px-4 dark:divide-white/10 dark:bg-dark-bg">
+            <dl className="mt-5 divide-y divide-slate-navy/10 rounded-xl bg-cream px-4 dark:divide-white/10 dark:bg-dark-bg">
               <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 py-3">
                 <dt className="font-semibold">{bookingPage.pay.bank}</dt>
                 <dd>{pay.bank_name}</dd>
@@ -225,11 +225,11 @@ export default async function Page({
               </PendingButton>
             </ActionForm>
           </div>
-        </Card>
+        </Panel>
       )}
 
       {isNight && status === "pending_approval" && (
-        <Card className="mt-6">
+        <Panel className="mt-6">
           <h2 className="text-h3">{overnightBooking.waiting.heading}</h2>
           <p className="mt-2">{overnightBooking.waiting.text}</p>
           {b.hold_expires_at && (
@@ -242,13 +242,13 @@ export default async function Page({
               {overnightBooking.waiting.contact}
             </a>
           </p>
-        </Card>
+        </Panel>
       )}
 
       {isNight && status === "pending_payment" && b.approved_at && <p className="mt-6 font-semibold">{overnightBooking.approvedNote}</p>}
 
       {details && (
-        <Card className="mt-6">
+        <Panel className="mt-6">
           <h2 className="text-h3">{overnightBooking.details.heading}</h2>
           <p className="mt-2">{overnightBooking.details.intro}</p>
           {details.location && (
@@ -263,11 +263,11 @@ export default async function Page({
             </div>
           )}
           <p className="mt-3 text-sm">{overnightBooking.details.times(at(details.checkin), at(details.checkout))}</p>
-        </Card>
+        </Panel>
       )}
 
       {status === "payment_claimed" && (
-        <Card className="mt-6">
+        <Panel className="mt-6">
           <h2 className="text-h3">{claim.claimedHeading}</h2>
           <p className="mt-2">{claim.claimedText}</p>
           {payment?.customer_reference && (
@@ -275,19 +275,19 @@ export default async function Page({
               <span className="font-semibold">{claim.yourReference}:</span> {payment.customer_reference}
             </p>
           )}
-        </Card>
+        </Panel>
       )}
 
       {status === "confirmed" && (
-        <Card className="mt-6">
+        <Panel className="mt-6">
           <h2 className="text-h3">{claim.confirmedHeading}</h2>
           <p className="mt-2">{claim.confirmedText}</p>
           {b.is_student_price && <p className="mt-3 rounded-xl bg-amber/30 p-3 text-sm font-medium">{claim.studentReminder}</p>}
-        </Card>
+        </Panel>
       )}
 
       {status === "rejected" && neverApproved && (
-        <Card className="mt-6">
+        <Panel className="mt-6">
           <h2 className="text-h3">{overnightBooking.rejected.heading}</h2>
           {b.cancel_reason && (
             <p className="mt-2">
@@ -300,11 +300,11 @@ export default async function Page({
               {claim.contactLine}
             </Link>
           </p>
-        </Card>
+        </Panel>
       )}
 
       {status === "rejected" && !neverApproved && (
-        <Card className="mt-6">
+        <Panel className="mt-6">
           <h2 className="text-h3">{claim.rejectedHeading}</h2>
           {payment?.rejected_reason && (
             <p className="mt-2">
@@ -317,11 +317,11 @@ export default async function Page({
               {claim.contactLine}
             </Link>
           </p>
-        </Card>
+        </Panel>
       )}
 
       {status === "cancelled" && (
-        <Card className="mt-6">
+        <Panel className="mt-6">
           <p>{claim.cancelledText}</p>
           {b.refund_owed && !b.refund_done_at && (
             <p className="mt-2 font-semibold">
@@ -329,19 +329,19 @@ export default async function Page({
               {b.refund_amount_kobo !== null && " (" + formatNaira(b.refund_amount_kobo) + ")"}
             </p>
           )}
-        </Card>
+        </Panel>
       )}
 
       {status === "no_show" && (
-        <Card className="mt-6">
+        <Panel className="mt-6">
           <p>{claim.noShowText}</p>
-        </Card>
+        </Panel>
       )}
 
       {status === "expired" && <p className="mt-6">{neverApproved ? overnightBooking.expired : bookingPage.pay.expired}</p>}
 
       {isPass && renewOpen && (
-        <Card className="mt-6">
+        <Panel className="mt-6">
           <h2 className="text-h3">{passBooking.renew.heading}</h2>
           <p className="mt-2">{passBooking.renew.text}</p>
           <ActionForm action={renewPassAction} notices={passBooking.notices} errors={{ ...bookingErrors, ...passBooking.errors }} className="mt-4">
@@ -350,7 +350,7 @@ export default async function Page({
               {passBooking.renew.button}
             </PendingButton>
           </ActionForm>
-        </Card>
+        </Panel>
       )}
 
       </div>

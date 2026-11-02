@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { SettingsFrame, adminButton, adminInput, adminTextarea } from "@/components/admin/SettingsFrame";
-import { Card } from "@/components/Card";
+import { Panel } from "@/components/Panel";
 import { overnightPage, errors, notices } from "@/content/admin-settings";
 import { requireRole } from "@/lib/auth";
 import { noIndex } from "@/lib/no-index";
@@ -27,7 +27,7 @@ export default async function Page() {
   return (
     <SettingsFrame heading={overnightPage.heading} text={overnightPage.text}>
       <ActionForm action={saveOvernightAction} notices={notices} errors={errors} className="space-y-4">
-        <Card>
+        <Panel>
           <div className="flex flex-wrap gap-4">
             <div>
               <label htmlFor="checkin" className="mb-1.5 block text-sm font-semibold">
@@ -42,21 +42,21 @@ export default async function Page() {
               <input id="checkout" name="checkout" type="time" defaultValue={hhmm(data?.overnight_checkout)} className={adminInput} />
             </div>
           </div>
-        </Card>
-        <Card>
+        </Panel>
+        <Panel>
           <label htmlFor="location" className="mb-1.5 block text-sm font-semibold">
             {overnightPage.location}
           </label>
           <textarea id="location" name="location" rows={3} maxLength={500} defaultValue={data?.overnight_location_private ?? ""} className={adminTextarea} />
           <p className="mt-1 text-sm opacity-75">{overnightPage.locationHelp}</p>
-        </Card>
-        <Card>
+        </Panel>
+        <Panel>
           <label htmlFor="rules" className="mb-1.5 block text-sm font-semibold">
             {overnightPage.rules}
           </label>
           <textarea id="rules" name="rules" rows={6} maxLength={2000} defaultValue={data?.overnight_rules_text ?? ""} className={adminTextarea} />
           <p className="mt-1 text-sm opacity-75">{overnightPage.rulesHelp}</p>
-        </Card>
+        </Panel>
         <PendingButton className={adminButton}>
           {overnightPage.save}
         </PendingButton>

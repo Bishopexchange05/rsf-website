@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { SettingsFrame, adminButton, adminInput } from "@/components/admin/SettingsFrame";
-import { Card } from "@/components/Card";
+import { Panel } from "@/components/Panel";
 import { pricingPage, errors, notices } from "@/content/admin-settings";
 import { requireRole } from "@/lib/auth";
 import { noIndex } from "@/lib/no-index";
@@ -29,18 +29,18 @@ export default async function Page() {
 
   return (
     <SettingsFrame heading={pricingPage.heading} text={pricingPage.text}>
-      <Card className="mb-6">
+      <Panel className="mb-6">
         <h2 className="text-h3">{pricingPage.rulesHeading}</h2>
         <ul className="mt-3 list-disc space-y-1 pl-5 text-sm">
           {pricingPage.rules.map((r) => (
             <li key={r}>{r}</li>
           ))}
         </ul>
-      </Card>
+      </Panel>
 
       <ActionForm action={savePricesAction} notices={notices} errors={errors} className="space-y-6">
         {pricingPage.groups.map((g) => (
-          <Card key={g.heading}>
+          <Panel key={g.heading}>
             <h2 className="text-h3">{g.heading}</h2>
             <div className="mt-4 space-y-4">
               {g.rows.map((r) => {
@@ -69,7 +69,7 @@ export default async function Page() {
                 );
               })}
             </div>
-          </Card>
+          </Panel>
         ))}
         <PendingButton className={adminButton}>
           {pricingPage.save}

@@ -3,6 +3,7 @@ import localFont from "next/font/local";
 import "./globals.css";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import { VisitCounter } from "@/components/VisitCounter";
 import { site } from "@/content/site";
 import { shareImage } from "@/lib/share-image";
 import { media, meta } from "@/content/home";
@@ -74,6 +75,7 @@ export default function RootLayout({
         </div>
         <main>{children}</main>
         <Footer />
+        <VisitCounter />
       </body>
     </html>
   );

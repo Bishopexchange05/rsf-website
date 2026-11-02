@@ -23,14 +23,6 @@ function lagosWeekday(): number {
   return ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].indexOf(day) + 1;
 }
 
-function Tick() {
-  return (
-    <svg viewBox="0 0 20 20" className="mt-0.5 h-5 w-5 shrink-0 text-brand-green dark:text-dark-green" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
-      <path d="M4 10.5l4 4 8-9" />
-    </svg>
-  );
-}
-
 export async function PublicWorkspaceInfo() {
   const info: PublicSettings | null = await loadPublicSettings();
   if (!info) return null;
@@ -68,7 +60,7 @@ export async function PublicWorkspaceInfo() {
 
         <ul className="mt-6 grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-5">
           {cards.map((x) => (
-            <li key={x.key} className={cn("flex flex-col rounded-2xl p-4 shadow-sm sm:p-5", x.value === null ? "border-2 border-dashed border-slate-navy/20 bg-transparent dark:border-white/20" : "bg-white dark:bg-dark-card")}>
+            <li key={x.key} className={cn("flex flex-col rounded-2xl p-4 shadow-sm sm:p-5", x.value === null ? "border border-slate-navy/15 bg-cream dark:border-white/15 dark:bg-dark-bg" : "bg-white dark:bg-dark-card")}>
               <p className="font-heading text-base leading-tight sm:text-lg">{x.label}</p>
               {x.value === null ? (
                 <>
@@ -129,12 +121,9 @@ export async function PublicWorkspaceInfo() {
 
           <Card>
             <h4 className="font-heading text-lg">{publicInfo.goodToKnow}</h4>
-            <ul className="mt-3 space-y-2 text-sm">
+            <ul className="mt-3 list-disc space-y-2 pl-5 text-sm marker:text-navy dark:marker:text-dark-green">
               {notes.map((n) => (
-                <li key={n} className="flex gap-2">
-                  <Tick />
-                  <span>{n}</span>
-                </li>
+                <li key={n}>{n}</li>
               ))}
             </ul>
           </Card>

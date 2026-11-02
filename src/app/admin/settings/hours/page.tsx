@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { SettingsFrame, adminButton, adminInput } from "@/components/admin/SettingsFrame";
-import { Card } from "@/components/Card";
+import { Panel } from "@/components/Panel";
 import { hoursPage, weekdays, errors, notices } from "@/content/admin-settings";
 import { requireRole } from "@/lib/auth";
 import { noIndex } from "@/lib/no-index";
@@ -30,7 +30,7 @@ export default async function Page() {
         <ul className="space-y-4">
           {rows.map((r) => (
             <li key={r.weekday}>
-              <Card>
+              <Panel>
                 <h2 className="text-h3">{weekdays[r.weekday - 1]}</h2>
                 <div className="mt-3 flex flex-wrap items-end gap-4">
                   <label className="flex min-h-11 items-center gap-2 text-sm font-semibold">
@@ -50,7 +50,7 @@ export default async function Page() {
                     <input id={`close-${r.weekday}`} name={`close-${r.weekday}`} type="time" defaultValue={hhmm(r.closes_at)} className={adminInput} />
                   </div>
                 </div>
-              </Card>
+              </Panel>
             </li>
           ))}
         </ul>

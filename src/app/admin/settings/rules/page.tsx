@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { SettingsFrame, adminButton, adminInput } from "@/components/admin/SettingsFrame";
-import { Card } from "@/components/Card";
+import { Panel } from "@/components/Panel";
 import { ActionForm } from "@/components/ActionForm";
 import { PendingButton } from "@/components/PendingButton";
 import { rulesPage, errors, notices } from "@/content/admin-settings";
@@ -29,7 +29,7 @@ export default async function Page() {
   const maxDesks = Number(s.monthly_pass_max_desks ?? 10);
 
   const numberCard = (f: Field) => (
-    <Card key={f.name}>
+    <Panel key={f.name}>
       <label htmlFor={f.name} className="mb-1.5 block text-sm font-semibold">
         {f.label}
       </label>
@@ -45,7 +45,7 @@ export default async function Page() {
         className={`${adminInput} max-w-40`}
       />
       <p className="mt-1 text-sm opacity-75">{f.help}</p>
-    </Card>
+    </Panel>
   );
 
   return (
@@ -53,13 +53,13 @@ export default async function Page() {
       <ActionForm action={saveRulesAction} notices={notices} errors={errors} className="space-y-4">
         {general.map(numberCard)}
 
-        <Card>
+        <Panel>
           <label htmlFor="half_day_split" className="mb-1.5 block text-sm font-semibold">
             {rulesPage.halfDayLabel}
           </label>
           <input id="half_day_split" name="half_day_split" type="time" required defaultValue={String(s.half_day_split ?? "13:00").slice(0, 5)} className={`${adminInput} max-w-40`} />
           <p className="mt-1 text-sm opacity-75">{rulesPage.halfDayHelp}</p>
-        </Card>
+        </Panel>
 
         <h2 className="pt-4 text-h3">{rulesPage.monthlyHeading}</h2>
         <div className="rounded-2xl border-l-4 border-brand-green bg-white p-4 text-sm shadow-sm dark:bg-dark-card">
@@ -70,7 +70,7 @@ export default async function Page() {
         <h2 className="pt-4 text-h3">{rulesPage.overnightHeading}</h2>
         {overnight.map(numberCard)}
 
-        <Card>
+        <Panel>
           <label className="flex min-h-11 items-start gap-3">
             <input type="checkbox" name="require_verified_email" defaultChecked={!!s.require_verified_email} className="mt-1 h-5 w-5 shrink-0 accent-navy" />
             <span>
@@ -78,7 +78,7 @@ export default async function Page() {
               <span className="block text-sm opacity-75">{rulesPage.verifiedEmailHelp}</span>
             </span>
           </label>
-        </Card>
+        </Panel>
         <PendingButton className={adminButton}>{rulesPage.save}</PendingButton>
       </ActionForm>
     </SettingsFrame>

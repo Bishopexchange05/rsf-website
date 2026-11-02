@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { EmptyState } from "@/components/admin/EmptyState";
-import { Card } from "@/components/Card";
+import { Panel } from "@/components/Panel";
 import { emailHealth } from "@/content/accounts";
 import { requireRole } from "@/lib/auth";
 import { noIndex } from "@/lib/no-index";
@@ -51,11 +51,11 @@ export default async function Page() {
   return (
     <AdminShell heading={emailHealth.heading} text={emailHealth.text} isAdmin>
       <div className="grid gap-4 md:grid-cols-2">
-        <Card>
+        <Panel>
           <p className="text-sm font-semibold opacity-75">{emailHealth.provider}</p>
           <p className="mt-1 text-lg font-semibold">{emailHealth.providers[provider] ?? provider}</p>
-        </Card>
-        <Card>
+        </Panel>
+        <Panel>
           <p className="text-sm font-semibold opacity-75">{emailHealth.today}</p>
           <p className="mt-1 text-lg font-semibold">{hasCap ? emailHealth.capLabel(sentToday, cap, pct) : `${sentToday}`}</p>
           {!hasCap && <p className="mt-1 text-sm opacity-75">{emailHealth.capNotSet}</p>}
@@ -64,7 +64,7 @@ export default async function Page() {
               {emailHealth.capWarning}
             </p>
           )}
-        </Card>
+        </Panel>
       </div>
 
       <h2 className="mt-10 text-h3">{emailHealth.tableHeading}</h2>

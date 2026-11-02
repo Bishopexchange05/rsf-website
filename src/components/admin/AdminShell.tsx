@@ -1,4 +1,5 @@
 import { AdminTabs } from "@/components/admin/AdminTabs";
+import { LeafDivider } from "@/components/LeafDivider";
 import { Toaster } from "@/components/admin/Toaster";
 import { admin } from "@/content/accounts";
 import { requestsAdmin } from "@/content/overnight";
@@ -28,10 +29,10 @@ export function AdminShell({
   ];
   return (
     <>
-      <section className="bg-gradient-to-br from-navy to-purple pt-24 text-white dark:from-dark-bg dark:to-purple-panel md:pt-28">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <p className="font-heading text-sm uppercase tracking-widest text-brand-green dark:text-dark-green">{admin.label}</p>
-          <h1 className="mt-1 text-h2">{heading}</h1>
+      <section className="relative overflow-hidden bg-navy pt-24 text-white dark:border-b dark:border-white/10 dark:bg-dark-bg md:pt-28">
+        <LeafDivider className="pointer-events-none absolute -right-10 top-20 hidden w-96 text-white/15 md:block" />
+        <div className="relative mx-auto max-w-6xl px-4 sm:px-6">
+          <h1 className="text-h2">{heading}</h1>
           <p className="mt-2 max-w-2xl text-white/90">{text}</p>
           <AdminTabs tabs={tabs} ariaLabel={admin.nav.ariaLabel} back={admin.nav.back} />
         </div>

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { SettingsFrame, adminButton, adminInput, adminTextarea } from "@/components/admin/SettingsFrame";
-import { Card } from "@/components/Card";
+import { Panel } from "@/components/Panel";
 import { bankPage, errors, notices } from "@/content/admin-settings";
 import { requireRole } from "@/lib/auth";
 import { noIndex } from "@/lib/no-index";
@@ -22,7 +22,7 @@ export default async function Page() {
   return (
     <SettingsFrame heading={bankPage.heading} text={bankPage.text}>
       <ActionForm action={saveBankAction} notices={notices} errors={errors} className="space-y-4">
-        <Card className="space-y-4">
+        <Panel className="space-y-4">
           <div>
             <label htmlFor="bank_name" className="mb-1.5 block text-sm font-semibold">
               {bankPage.bankName}
@@ -57,7 +57,7 @@ export default async function Page() {
             </label>
             <textarea id="note" name="note" rows={3} maxLength={300} defaultValue={data?.note ?? ""} className={adminTextarea} />
           </div>
-        </Card>
+        </Panel>
         <PendingButton className={adminButton}>
           {bankPage.save}
         </PendingButton>

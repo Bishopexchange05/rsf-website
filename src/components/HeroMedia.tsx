@@ -64,12 +64,12 @@ export function HeroMedia() {
           fill
           priority
           sizes="100vw"
-          className="object-cover"
+          className="object-cover object-[72%_center] md:object-center"
         />
         {mounted && media.hero.video && (
           <video
             ref={videoRef}
-            className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-700 ${
+            className={`absolute inset-0 h-full w-full object-cover object-[72%_center] transition-opacity md:object-center duration-700 ${
               playing ? "opacity-100" : "opacity-0"
             }`}
             muted
@@ -83,7 +83,9 @@ export function HeroMedia() {
             <source src={media.hero.video} type="video/mp4" />
           </video>
         )}
-        <div className="absolute inset-0 bg-gradient-to-br from-navy/85 to-purple/80 dark:from-dark-bg/90 dark:to-purple-panel/85" />
+        {/* Phones: a little lighter at the top so the photo shows; darker lower down behind the text. */}
+        <div className="absolute inset-0 bg-gradient-to-b from-navy/65 via-navy/80 to-purple/90 dark:from-dark-bg/75 dark:via-dark-bg/85 dark:to-purple-panel/90 md:hidden" />
+        <div className="absolute inset-0 hidden bg-gradient-to-br from-navy/85 to-purple/80 dark:from-dark-bg/90 dark:to-purple-panel/85 md:block" />
       </div>
 
       {mounted && media.hero.video && (

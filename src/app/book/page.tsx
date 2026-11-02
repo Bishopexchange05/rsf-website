@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 import { ActionForm } from "@/components/ActionForm";
 import { BookingShell, bookButton, bookInput, bookOutline } from "@/components/booking/BookingShell";
 import { HourPicker, type PickerSlot } from "@/components/booking/HourPicker";
-import { Card } from "@/components/Card";
+import { Panel } from "@/components/Panel";
 import { PendingButton } from "@/components/PendingButton";
 import { common } from "@/content/accounts";
 import { bookPage, errors as bookErrors } from "@/content/booking";
@@ -131,9 +131,9 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ d
       </Link>
     </p>
   );
-  const optionCard = "flex min-h-24 flex-col justify-between gap-2 rounded-2xl border-2 p-4 text-left transition";
-  const optionIdle = "border-transparent bg-white shadow-sm hover:border-navy/40 dark:bg-dark-card dark:hover:border-dark-green/50";
-  const optionOn = "border-navy bg-white shadow-md dark:border-dark-green dark:bg-dark-card";
+  const optionCard = "flex min-h-24 flex-col justify-between gap-2 rounded-xl border-2 p-4 text-left transition";
+  const optionIdle = "border-slate-navy/10 bg-white hover:border-navy/40 dark:border-white/10 dark:bg-dark-card dark:hover:border-dark-green/50";
+  const optionOn = "border-navy bg-white dark:border-dark-green dark:bg-dark-card";
 
   return (
     <BookingShell heading={bookPage.heading} text={bookPage.text} staff={needsTwoFactor(profile.role)} wide>
@@ -172,7 +172,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ d
           <StepHeading n={2}>
             <span id="step-pass">{bookPage.steps.pass}</span>
           </StepHeading>
-          <Card className="p-6 sm:p-8">
+          <Panel className="p-6 sm:p-8">
             <h3 className="text-h3">{pass.heading}</h3>
             {p.month ? (
               <>
@@ -227,7 +227,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ d
             ) : (
               <div className="mt-4">{contact}</div>
             )}
-          </Card>
+          </Panel>
         </section>
       ) : (
         <>
@@ -248,8 +248,8 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ d
                         href={href({ date: d })}
                         aria-current={on ? "date" : undefined}
                         className={cn(
-                          "flex min-h-16 w-20 flex-col items-center justify-center rounded-2xl border-2 text-center transition",
-                          on ? "border-navy bg-navy text-white dark:border-dark-green dark:bg-dark-green dark:text-dark-bg" : "border-transparent bg-white shadow-sm hover:border-navy/40 dark:bg-dark-card",
+                          "flex min-h-16 w-20 flex-col items-center justify-center rounded-xl border-2 text-center transition",
+                          on ? "border-navy bg-navy text-white dark:border-dark-green dark:bg-dark-green dark:text-dark-bg" : "border-slate-navy/10 bg-white hover:border-navy/40 dark:border-white/10 dark:bg-dark-card",
                         )}
                       >
                         <span className="text-xs font-semibold">{top}</span>
@@ -285,17 +285,17 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ d
             </StepHeading>
 
             {slots.length === 0 ? (
-              <Card className="p-6 sm:p-8">
+              <Panel className="p-6 sm:p-8">
                 <p>{bookPage.closedDay}</p>
-              </Card>
+              </Panel>
             ) : covered ? (
-              <Card className="p-6 sm:p-8">
+              <Panel className="p-6 sm:p-8">
                 <p className="font-semibold">{pass.coversDay}</p>
-              </Card>
+              </Panel>
             ) : kind === "hour" ? (
               // Not a Card: the summary bar inside sticks to the bottom of a phone screen, which an
               // overflow-hidden card would stop.
-              <div className="rounded-2xl bg-white p-6 shadow-sm dark:bg-dark-card sm:p-8">
+              <div className="rounded-xl border border-slate-navy/10 bg-white p-6 dark:border-white/10 dark:bg-dark-card sm:p-8">
                 {p.hour ? (
                   <HourPicker date={date} slots={pickerSlots} maxHours={config.max_hours_per_booking} standardKobo={p.hour.standard} studentKobo={p.hour.student} />
                 ) : (
@@ -303,7 +303,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ d
                 )}
               </div>
             ) : kind === "half_day" && p.half_day ? (
-              <Card className="p-6 sm:p-8">
+              <Panel className="p-6 sm:p-8">
                 <p className="text-sm opacity-85">{bookPage.halfPick}</p>
                 <ActionForm action={createBookingAction} errors={bookErrors} className="mt-4">
                   <input type="hidden" name="date" value={date} />
@@ -323,7 +323,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ d
                           name="half"
                           value={value}
                           disabled={!ok}
-                          className="flex min-h-24 flex-col items-start justify-center gap-1 rounded-2xl border-2 border-navy/25 p-4 text-left transition hover:border-navy hover:bg-navy/5 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/25 dark:hover:border-dark-green dark:hover:bg-white/5"
+                          className="flex min-h-24 flex-col items-start justify-center gap-1 rounded-xl border-2 border-navy/25 p-4 text-left transition hover:border-navy hover:bg-navy/5 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/25 dark:hover:border-dark-green dark:hover:bg-white/5"
                         >
                           <span className="font-heading text-lg">{label}</span>
                           <span className="text-sm">
@@ -334,9 +334,9 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ d
                     })}
                   </div>
                 </ActionForm>
-              </Card>
+              </Panel>
             ) : (
-              <Card className="p-6 sm:p-8">
+              <Panel className="p-6 sm:p-8">
                 {p.day ? (
                   <ActionForm action={createBookingAction} errors={bookErrors} className="space-y-4">
                     <input type="hidden" name="date" value={date} />
@@ -354,7 +354,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ d
                 ) : (
                   contact
                 )}
-              </Card>
+              </Panel>
             )}
           </section>
         </>

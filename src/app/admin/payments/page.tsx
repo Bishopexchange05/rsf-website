@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { EmptyState } from "@/components/admin/EmptyState";
 import { PaymentDecision } from "@/components/admin/PaymentDecision";
-import { Card } from "@/components/Card";
+import { Panel } from "@/components/Panel";
 import { myBookings } from "@/content/booking";
 import { queue } from "@/content/payments";
 import { requireRole } from "@/lib/auth";
@@ -60,7 +60,7 @@ export default async function Page() {
             const overdue = pay ? now - new Date(pay.claimed_at).getTime() > reviewHours * 3600 * 1000 : false;
             return (
               <li key={r.id}>
-                <Card>
+                <Panel>
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
                       <h2 className="font-mono text-xl font-semibold">{r.reference}</h2>
@@ -99,7 +99,7 @@ export default async function Page() {
                       {queue.viewBooking}
                     </Link>
                   </p>
-                </Card>
+                </Panel>
               </li>
             );
           })}

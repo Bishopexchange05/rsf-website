@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { SettingsFrame, adminButton } from "@/components/admin/SettingsFrame";
-import { Card } from "@/components/Card";
+import { Panel } from "@/components/Panel";
 import { readiness as readinessText, settingsHub, errors, notices } from "@/content/admin-settings";
 import { requireRole } from "@/lib/auth";
 import { noIndex } from "@/lib/no-index";
@@ -30,7 +30,7 @@ export default async function Page() {
 
   return (
     <SettingsFrame heading={settingsHub.heading} text={settingsHub.text} showBack={false}>
-      <Card className="mb-8">
+      <Panel className="mb-8">
         <h2 className="text-h3">{settingsHub.switchHeading}</h2>
         <p className="mt-2">{on ? settingsHub.switchOnText : settingsHub.switchOffText}</p>
         <ActionForm action={setBookingEnabledAction} notices={notices} errors={errors} className="mt-4">
@@ -40,10 +40,10 @@ export default async function Page() {
           </PendingButton>
           {!on && <p className="mt-2 text-sm opacity-75">{settingsHub.turnOnHelp}</p>}
         </ActionForm>
-      </Card>
+      </Panel>
 
       {!on && (
-        <Card className="mb-8">
+        <Panel className="mb-8">
           <h2 className="text-h3">{readinessText.heading}</h2>
           <p className="mt-2 text-sm opacity-85">{readinessText.intro}</p>
           {notReady === 0 && <p className="mt-3 font-semibold">{readinessText.allGood}</p>}
@@ -72,20 +72,20 @@ export default async function Page() {
               );
             })}
           </ul>
-        </Card>
+        </Panel>
       )}
 
       <ul className="grid gap-4 md:grid-cols-2">
         {settingsHub.sections.map((s) => (
           <li key={s.href}>
-            <Card className="h-full">
+            <Panel className="h-full">
               <h2 className="text-h3">
                 <Link href={s.href} className="underline-offset-4 hover:underline">
                   {s.label}
                 </Link>
               </h2>
               <p className="mt-2 text-sm opacity-85">{s.text}</p>
-            </Card>
+            </Panel>
           </li>
         ))}
       </ul>

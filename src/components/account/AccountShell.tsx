@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { LeafDivider } from "@/components/LeafDivider";
 import { accountNav } from "@/content/accounts";
 import { bookingIsOpen } from "@/lib/booking-open";
 import { cn } from "@/lib/cn";
@@ -35,10 +36,10 @@ export async function AccountShell({
 
   return (
     <>
-      <section className="bg-gradient-to-br from-navy to-purple pt-24 text-white dark:from-dark-bg dark:to-purple-panel md:pt-28">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <p className="font-heading text-sm uppercase tracking-widest text-brand-green dark:text-dark-green">{accountNav.label}</p>
-          <h1 className="mt-1 text-h2">{heading}</h1>
+      <section className="relative overflow-hidden bg-navy pt-24 text-white dark:border-b dark:border-white/10 dark:bg-dark-bg md:pt-28">
+        <LeafDivider className="pointer-events-none absolute -right-10 top-20 hidden w-96 text-white/15 md:block" />
+        <div className="relative mx-auto max-w-6xl px-4 sm:px-6">
+          <h1 className="text-h2">{heading}</h1>
           {text && <p className="mt-2 max-w-2xl text-white/90">{text}</p>}
           <nav aria-label={accountNav.ariaLabel} className="-mx-4 mt-6 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden">
             <ul className="flex min-w-max items-end gap-1">

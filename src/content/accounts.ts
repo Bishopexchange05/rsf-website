@@ -168,9 +168,9 @@ export const accountNav = {
 // The account front page.
 export const overview = {
   title: "Your account",
-  hello: (firstName: string) => (firstName ? `Hello, ${firstName}` : "Hello"),
-  textOpen: "Your bookings at RSF Tech & Space, all in one place.",
-  textClosed: "Online booking at RSF Tech & Space opens soon. Your details are saved and ready.",
+  hello: (name: string) => name || "Your account",
+  textOpen: "Your desk bookings at RSF Tech & Space.",
+  textClosed: "Online booking at RSF Tech & Space opens soon. Your details are saved.",
   nextHeading: "Your next booking",
   nextNone: "You have no upcoming bookings.",
   nextNoneClosed: "Online booking opens soon. We will be glad to welcome you.",
@@ -179,7 +179,7 @@ export const overview = {
   viewBooking: "View booking",
   comingUpHeading: "Also coming up",
   allBookings: "See all my bookings",
-  quickHeading: "Quick links",
+  quickHeading: "Go to",
   bookDesk: "Book a desk",
   myBookings: "My bookings",
   settings: "Settings and password",
@@ -206,6 +206,7 @@ export const admin = {
   back: { label: "Back to your account", href: "/account" },
   staffNote: "Bookings and payments will appear here once booking opens.",
   links: [
+    { label: "Analytics", href: "/admin/analytics", text: "Members, money, bookings and visits over time." },
     { label: "People", href: "/admin/users", text: "Make someone Staff, change roles, deactivate accounts, reset two-step verification." },
     { label: "Settings", href: "/admin/settings", text: "Opening hours, desks, prices, booking rules and bank details." },
     { label: "Audit log", href: "/admin/audit", text: "A permanent record of what Admins and Staff have done." },
@@ -216,10 +217,13 @@ export const admin = {
 
 // The admin front page ("Today").
 export const adminHome = {
-  hello: (firstName: string) => (firstName ? `Good to see you, ${firstName}` : "Today"),
-  text: "What needs attention, and who is coming in today.",
-  needsHeading: "Needs attention",
-  allClear: "All clear",
+  heading: "Today",
+  text: (date: string, name: string, role: string) => `${date}. Signed in as ${name} (${role}).`,
+  needsHeading: "Waiting on you",
+  allClear: "Nothing waiting",
+  monthHeading: "This month so far",
+  openAnalytics: { label: "Open analytics", href: "/admin/analytics" },
+  todayColumns: ["Time", "Name", "Booking", "Reference", "Status"],
   tiles: {
     payments: { label: "Payments to check", href: "/admin/payments" },
     requests: { label: "Overnight requests waiting", href: "/admin/overnight" },

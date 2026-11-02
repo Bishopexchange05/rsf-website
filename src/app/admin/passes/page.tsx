@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { EmptyState } from "@/components/admin/EmptyState";
-import { Card } from "@/components/Card";
+import { Panel } from "@/components/Panel";
 import { myBookings } from "@/content/booking";
 import { passesAdmin } from "@/content/monthly";
 import { requireRole } from "@/lib/auth";
@@ -83,7 +83,7 @@ export default async function Page() {
 
   return (
     <AdminShell heading={passesAdmin.heading} text={passesAdmin.text} isAdmin={profile.role === "admin"}>
-      <Card className="mb-6">
+      <Panel className="mb-6">
         <p className="font-semibold">{passesAdmin.desksToday(todayCount, cap)}</p>
         <p className="mt-1 text-sm">{passesAdmin.desksBusiest(busiest.n, cap, dayLabel(`${busiest.day}T12:00:00+01:00`))}</p>
         {over > 0 && <p className="mt-3 rounded-xl bg-accent-red/15 p-3 text-sm font-medium">{passesAdmin.overfill(over)}</p>}
@@ -92,7 +92,7 @@ export default async function Page() {
             {passesAdmin.refunds}
           </Link>
         </p>
-      </Card>
+      </Panel>
 
       <div className="space-y-8">
         {groups.map((g) => (
@@ -110,7 +110,7 @@ export default async function Page() {
                   const ending = r.status === "confirmed" && daysLeft <= 5;
                   return (
                     <li key={r.id}>
-                      <Card>
+                      <Panel>
                         <div className="flex flex-wrap items-start justify-between gap-3">
                           <div className="min-w-0">
                             <p className="font-mono text-lg font-semibold">{r.reference}</p>
@@ -128,7 +128,7 @@ export default async function Page() {
                             {passesAdmin.open}
                           </Link>
                         </p>
-                      </Card>
+                      </Panel>
                     </li>
                   );
                 })}
