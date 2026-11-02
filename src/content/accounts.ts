@@ -152,6 +152,51 @@ export const account = {
   } as Record<string, string>,
 };
 
+// The tab bar on every account and booking page.
+export const accountNav = {
+  label: "Your account",
+  ariaLabel: "Account menu",
+  overview: { label: "Overview", href: "/account" },
+  bookings: { label: "My bookings", href: "/account/bookings" },
+  book: { label: "Book a desk", href: "/book" },
+  settings: { label: "Settings", href: "/account/settings" },
+  admin: { label: "Admin", href: "/admin" },
+  signOut: "Log out",
+  signingOut: "Logging out…",
+};
+
+// The account front page.
+export const overview = {
+  title: "Your account",
+  hello: (firstName: string) => (firstName ? `Hello, ${firstName}` : "Hello"),
+  textOpen: "Your bookings at RSF Tech & Space, all in one place.",
+  textClosed: "Online booking at RSF Tech & Space opens soon. Your details are saved and ready.",
+  nextHeading: "Your next booking",
+  nextNone: "You have no upcoming bookings.",
+  nextNoneClosed: "Online booking opens soon. We will be glad to welcome you.",
+  payBy: "Time left to pay",
+  payNow: "Pay now",
+  viewBooking: "View booking",
+  comingUpHeading: "Also coming up",
+  allBookings: "See all my bookings",
+  quickHeading: "Quick links",
+  bookDesk: "Book a desk",
+  myBookings: "My bookings",
+  settings: "Settings and password",
+  adminLink: "Open the admin area",
+  youHeading: "Your details",
+  editDetails: "Edit details",
+};
+
+// The account settings page (details, password, two-step login, your data).
+export const settingsPage = {
+  title: "Settings",
+  heading: "Settings",
+  text: "Your details, your password and your information.",
+  dangerHeading: "Delete your account",
+  dangerText: "This removes your login and your personal details. It cannot be undone.",
+};
+
 export const admin = {
   title: "Admin area",
   label: "Admin",

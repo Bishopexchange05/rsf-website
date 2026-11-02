@@ -8,7 +8,7 @@ import { Card } from "@/components/Card";
 import { PendingButton } from "@/components/PendingButton";
 import { errors as bookErrors } from "@/content/booking";
 import { overnight, overnightErrors } from "@/content/overnight";
-import { requireUser } from "@/lib/auth";
+import { needsTwoFactor, requireUser } from "@/lib/auth";
 import { requestOvernightAction } from "@/lib/booking-actions";
 import { addDays, dayLabel, isIsoDate, lagosDate, timeLabel } from "@/lib/lagos";
 import { noIndex } from "@/lib/no-index";
@@ -29,7 +29,8 @@ const clock = (hhmm: string) => timeLabel(`2000-01-01T${hhmm}:00+01:00`);
 
 export default async function Page({ searchParams }: { searchParams: Promise<{ checkin?: string; nights?: string }> }) {
   if (!accountsEnabled) notFound();
-  await requireUser();
+  const { profile } = await requireUser();
+  const staff = needsTwoFactor(profile.role);
   const supabase = await createClient();
 
   const { data: cfg } = await supabase.rpc("get_booking_config");
@@ -41,7 +42,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ c
 
   if (!on?.enabled) {
     return (
-      <BookingShell label={overnight.label} heading={overnight.heading} text={overnight.text}>
+      <BookingShell heading={overnight.heading} text={overnight.text} staff={staff}>
         <Card>
           <p>{overnight.closed}</p>
         </Card>
@@ -69,7 +70,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ c
   const range = `${dayLabel(`${checkin}T12:00:00+01:00`)}, check-in ${clock(on.checkin ?? "00:00")}, to ${dayLabel(`${lastNight}T12:00:00+01:00`)}, check-out ${clock(on.checkout ?? "00:00")}`;
 
   return (
-    <BookingShell label={overnight.label} heading={overnight.heading} text={overnight.text}>
+    <BookingShell heading={overnight.heading} text={overnight.text} staff={staff}>
       <Card className="mb-6">
         <h2 className="text-h3">{overnight.steps.heading}</h2>
         <ol className="mt-3 list-decimal space-y-2 pl-5">

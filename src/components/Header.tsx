@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { headerAccountLink, headerAdminLink, headerLink } from "@/content/accounts";
 import { nav, site } from "@/content/site";
+import { SignOutButton } from "./account/SignOutButton";
 import { Logo } from "./Logo";
 import { ThemeToggle } from "./ThemeToggle";
 import { cn } from "@/lib/cn";
@@ -195,6 +196,11 @@ export function Header() {
                 >
                   {accountLink.label}
                 </Link>
+              </li>
+            )}
+            {accountsOn && signedIn && (
+              <li className="border-b border-white/15">
+                <SignOutButton className="flex min-h-14 w-full items-center font-heading text-xl text-white disabled:opacity-70" />
               </li>
             )}
           </ul>

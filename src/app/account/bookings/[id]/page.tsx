@@ -3,7 +3,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ActionForm } from "@/components/ActionForm";
 import { BookingShell, bookButton, bookInput, bookOutline } from "@/components/booking/BookingShell";
+import { CopyButton } from "@/components/booking/CopyButton";
 import { HoldCountdown } from "@/components/booking/HoldCountdown";
+import { ProgressSteps, progressFor } from "@/components/booking/ProgressSteps";
+import { StatusChip } from "@/components/booking/StatusChip";
 import { Card } from "@/components/Card";
 import { PendingButton } from "@/components/PendingButton";
 import { common } from "@/content/accounts";
@@ -12,7 +15,7 @@ import { passBooking } from "@/content/monthly";
 import { overnightBooking } from "@/content/overnight";
 import { claim } from "@/content/payments";
 import { site } from "@/content/site";
-import { requireUser } from "@/lib/auth";
+import { needsTwoFactor, requireUser } from "@/lib/auth";
 import { cancelBookingAction, renewPassAction } from "@/lib/booking-actions";
 import { bookingWhen, dateTimeLabel, lagosDate, timeLabel } from "@/lib/lagos";
 import { noIndex } from "@/lib/no-index";
@@ -52,7 +55,7 @@ export default async function Page({
   searchParams: Promise<{ notice?: string }>;
 }) {
   if (!accountsEnabled) notFound();
-  const { user } = await requireUser();
+  const { user, profile } = await requireUser();
   const { id } = await params;
   if (!/^[0-9a-fA-F-]{36}$/.test(id)) notFound();
   const { notice } = await searchParams;
@@ -70,6 +73,7 @@ export default async function Page({
   const lapsed = b.status === "pending_payment" && !!b.hold_expires_at && new Date(b.hold_expires_at).getTime() <= Date.now();
   const status = lapsed ? "expired" : b.status;
   const needsPayment = status === "pending_payment";
+  const progress = progressFor(b.kind, status);
 
   let pay: Pay | null = null;
   if (needsPayment) {
@@ -110,24 +114,33 @@ export default async function Page({
   }
 
   return (
-    <BookingShell label="RSF Tech & Space" heading={bookingPage.heading} text={myBookings.kinds[b.kind] ?? b.kind} notice={notice}>
+    <BookingShell active="bookings" heading={bookingPage.heading} text={myBookings.kinds[b.kind] ?? b.kind} notice={notice} staff={needsTwoFactor(profile.role)} wide>
+      {progress && (
+        <Card className="mb-6 px-4 py-5 sm:px-8">
+          <ProgressSteps steps={progress.steps} done={progress.done} />
+        </Card>
+      )}
+      <div className="grid items-start gap-6 lg:grid-cols-5 lg:grid-rows-[auto_1fr]">
+      <div className="space-y-6 lg:col-span-2 lg:col-start-4 lg:row-start-1">
       <Card>
-        <dl className="space-y-2">
+        <dl className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+            <dt className="font-semibold">{bookingPage.status}</dt>
+            <dd>
+              <StatusChip status={status} />
+            </dd>
+          </div>
           <div className="flex flex-wrap justify-between gap-x-4">
             <dt className="font-semibold">{bookingPage.reference}</dt>
             <dd className="font-mono text-lg font-semibold">{b.reference}</dd>
           </div>
-          <div className="flex flex-wrap justify-between gap-x-4">
+          <div>
             <dt className="font-semibold">{bookingPage.when}</dt>
             <dd>{bookingWhen(b)}</dd>
           </div>
           <div className="flex flex-wrap justify-between gap-x-4">
             <dt className="font-semibold">{bookingPage.amount}</dt>
             <dd className="font-semibold">{formatNaira(b.amount_kobo)}</dd>
-          </div>
-          <div className="flex flex-wrap justify-between gap-x-4">
-            <dt className="font-semibold">{bookingPage.status}</dt>
-            <dd>{myBookings.statuses[status] ?? status}</dd>
           </div>
         </dl>
         {b.is_student_price && <p className="mt-3 text-sm opacity-85">{bookingPage.studentPrice}</p>}
@@ -141,38 +154,53 @@ export default async function Page({
         )}
       </Card>
 
+      </div>
+
+      <div className="space-y-6 lg:col-span-3 lg:col-start-1 lg:row-span-2 lg:row-start-1">
       {needsPayment && (
-        <Card className="mt-6">
+        <Card className="p-6 sm:p-8">
           <h2 className="text-h3">{bookingPage.pay.heading}</h2>
           <p className="mt-2">{bookingPage.pay.intro}</p>
           {pay && pay.hold_expires_at && (
-            <p className="mt-4">
-              {bookingPage.pay.timeLeft}: <HoldCountdown expiresAt={pay.hold_expires_at} />
+            <p className="mt-5 flex flex-wrap items-baseline justify-between gap-2 rounded-2xl border-2 border-accent-red/30 bg-accent-red/5 px-4 py-3 dark:border-red-300/30">
+              <span className="font-semibold">{bookingPage.pay.timeLeft}</span>
+              <span className="text-2xl">
+                <HoldCountdown expiresAt={pay.hold_expires_at} />
+              </span>
             </p>
           )}
           {pay && pay.bank_name && pay.account_number && pay.account_name ? (
-            <dl className="mt-4 space-y-2 rounded-xl bg-cream p-4 dark:bg-dark-bg">
-              <div className="flex flex-wrap justify-between gap-x-4">
+            <dl className="mt-5 divide-y divide-slate-navy/10 rounded-2xl bg-cream px-4 dark:divide-white/10 dark:bg-dark-bg">
+              <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 py-3">
                 <dt className="font-semibold">{bookingPage.pay.bank}</dt>
                 <dd>{pay.bank_name}</dd>
               </div>
-              <div className="flex flex-wrap justify-between gap-x-4">
+              <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 py-3">
                 <dt className="font-semibold">{bookingPage.pay.accountNumber}</dt>
-                <dd className="font-mono text-lg font-semibold">{pay.account_number}</dd>
+                <dd className="flex items-center gap-3">
+                  <span className="font-mono text-lg font-semibold">{pay.account_number}</span>
+                  <CopyButton value={pay.account_number} what={bookingPage.pay.accountNumber.toLowerCase()} />
+                </dd>
               </div>
-              <div className="flex flex-wrap justify-between gap-x-4">
+              <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 py-3">
                 <dt className="font-semibold">{bookingPage.pay.accountName}</dt>
                 <dd>{pay.account_name}</dd>
               </div>
-              <div className="flex flex-wrap justify-between gap-x-4">
+              <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 py-3">
                 <dt className="font-semibold">{bookingPage.amount}</dt>
-                <dd className="font-semibold">{formatNaira(pay.amount_kobo)}</dd>
+                <dd className="flex items-center gap-3">
+                  <span className="text-lg font-semibold">{formatNaira(pay.amount_kobo)}</span>
+                  <CopyButton value={String(Math.round(pay.amount_kobo / 100))} what={bookingPage.amount.toLowerCase()} />
+                </dd>
               </div>
-              <div className="flex flex-wrap justify-between gap-x-4">
+              <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 py-3">
                 <dt className="font-semibold">{bookingPage.pay.referenceHint}</dt>
-                <dd className="font-mono text-lg font-semibold">{pay.reference}</dd>
+                <dd className="flex items-center gap-3">
+                  <span className="font-mono text-lg font-semibold">{pay.reference}</span>
+                  <CopyButton value={pay.reference} what={bookingPage.reference.toLowerCase()} />
+                </dd>
               </div>
-              {pay.note && <p className="pt-2 text-sm">{pay.note}</p>}
+              {pay.note && <p className="py-3 text-sm">{pay.note}</p>}
             </dl>
           ) : (
             <p className="mt-4">{bookingPage.pay.noBank}</p>
@@ -324,8 +352,11 @@ export default async function Page({
         </Card>
       )}
 
+      </div>
+
+      <div className="space-y-6 lg:col-span-2 lg:col-start-4 lg:row-start-2">
       {canCancel && (
-        <ActionForm action={cancelBookingAction} notices={bookingNotices} errors={bookingErrors} className="mt-6">
+        <ActionForm action={cancelBookingAction} notices={bookingNotices} errors={bookingErrors}>
           <input type="hidden" name="booking" value={b.id} />
           <p className="mb-3 text-sm opacity-85">{status === "confirmed" ? (isPass ? passBooking.cancelConfirmed(cutoffHours) : bookingPage.cancel.confirmedHelp) : bookingPage.cancel.help}</p>
           <PendingButton className={bookOutline} pendingText={common.cancelling}>
@@ -334,11 +365,13 @@ export default async function Page({
         </ActionForm>
       )}
 
-      <p className="mt-8 text-sm">
-        <Link href={bookingPage.back.href} className="font-medium underline underline-offset-2">
+      <p className="text-sm">
+        <Link href={bookingPage.back.href} className="inline-flex min-h-11 items-center font-medium underline underline-offset-2">
           {bookingPage.back.label}
         </Link>
       </p>
+      </div>
+      </div>
     </BookingShell>
   );
 }

@@ -33,7 +33,7 @@ export const bookPage = {
   title: "Book a desk",
   label: "RSF Tech & Space",
   heading: "Book a desk",
-  text: "Choose a day, then the hours you need. We hold your desk while you pay by bank transfer.",
+  text: "Choose what you need, then the day and the time. We hold your desk while you pay by bank transfer.",
   dateLabel: "Choose a day",
   dateButton: "Show times",
   closedDay: "We are closed on that day. Please choose another day.",
@@ -41,8 +41,8 @@ export const bookPage = {
   hourly: {
     heading: "By the hour",
     pickLegend: "Choose your hours",
-    pickStart: (max: number) => `Click the first hour you want. You can book up to ${max} hours in a row.`,
-    pickEnd: "Now click the last hour you want. Every hour in between is included. Or press Book to take just this one hour.",
+    pickStart: (max: number) => `Tap the first hour you want. You can book up to ${max} hours in a row.`,
+    pickEnd: "Now tap the last hour you want. Every hour in between is included. Or press Book to take just this one hour.",
     nothingYet: "No hours chosen yet.",
     summary: (from: string, to: string, hours: number, price: string) =>
       `${from} to ${to}, ${hours === 1 ? "1 hour" : `${hours} hours`}, ${price}`,
@@ -76,6 +76,28 @@ export const bookPage = {
   },
   contactHref: "/contact",
   accountLink: { label: "My bookings", href: "/account/bookings" },
+  steps: {
+    what: "What do you need?",
+    day: "Choose a day",
+    time: "Choose your time",
+    pass: "Choose a start date",
+  },
+  options: {
+    hour: { label: "By the hour", note: (price: string) => `${price} per hour` },
+    half_day: { label: "Half day", note: (price: string) => `${price} for the morning or afternoon` },
+    day: { label: "Full day", note: (price: string) => `${price} for the whole day` },
+    month: { label: "Monthly pass", note: (price: string) => `${price} for 30 days` },
+    night: { label: "Overnight desk", note: "Approved in person first" },
+    contactNote: "Contact us for pricing",
+  },
+  today: "Today",
+  tomorrow: "Tomorrow",
+  otherDate: "Another date",
+  otherDateButton: "Go",
+  fewLeft: (n: number) => (n === 1 ? "1 left" : `${n} left`),
+  total: "Total",
+  halfPick: "Choose morning or afternoon. Each books a desk for that part of the day.",
+  dayNote: "One desk for the whole day, from opening to closing.",
 };
 
 export const myBookings = {
@@ -98,6 +120,11 @@ export const myBookings = {
     approved: "Approved",
   } as Record<string, string>,
   kinds: { hour: "By the hour", half_day: "Half day", day: "Full day", month: "Monthly pass", night: "Overnight" } as Record<string, string>,
+  upcoming: "Upcoming",
+  past: "Past and cancelled",
+  noUpcoming: "Nothing coming up.",
+  payNow: "Pay now",
+  timeLeft: "left to pay",
 };
 
 export const bookingPage = {
@@ -110,6 +137,17 @@ export const bookingPage = {
   studentPrice: "Student price. Please bring your student ID.",
   status: "Status",
   back: { label: "Back to my bookings", href: "/account/bookings" },
+  progressLabel: "Booking progress",
+  steps: {
+    booked: "Booked",
+    requested: "Requested",
+    approved: "Approved",
+    paid: "Paid",
+    confirmed: "Confirmed",
+  },
+  copy: "Copy",
+  copied: "Copied",
+  copyLabel: (what: string) => `Copy the ${what}`,
   pay: {
     heading: "How to pay",
     intro: "Make a bank transfer for the exact amount. Use your reference as the transfer description so we can find your payment.",

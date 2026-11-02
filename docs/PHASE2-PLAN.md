@@ -842,3 +842,19 @@ sign in again asked for the code; check query shows exactly one admin/staff and 
 Settings shows booking OFF. Open items noted by the owner: no sign-out button in the header (it is at the bottom of the account
 page; for the later UI/UX review). Still to do: part F (settings), G (domain email and Resend), H (booking on, owner's decision),
 J (restore rehearsal), a second Admin when the owner trusts someone, Yahoo/Outlook delivery test, renew the backup token in about a year.
+
+**Account and booking pages redesign (2 November 2026), plan approved by the owner; built on `phase-2`, NOT merged.**
+New shared account frame (`src/components/account/AccountShell.tsx`): slim banner and a tab bar (Overview, My bookings, Book a
+desk only while booking is on, Settings, Admin for staff, Log out); Log out also in the phone menu. `/account` is now an Overview
+(next booking with its status and Pay now and countdown, coming up, quick links, your details); the forms moved to the new
+`/account/settings` (details, password, two-step, your data; Delete in its own quiet section). My bookings: Upcoming and Past groups
+in date order, coloured status labels (red = pay, blue = being checked, green = confirmed, grey = ended), whole card tappable,
+countdown and Pay now on unpaid ones. One booking: Booked, Paid, Confirmed progress line (overnight: Requested, Approved, Paid,
+Confirmed), larger countdown, Copy buttons for account number, amount and reference; on phones Cancel comes after How to pay.
+Book a desk: numbered steps (what, day, time), a two-week day row (one tap, no Show times), compact hour grid that warns only when
+3 or fewer desks are left, the summary and Book button stay at the bottom of a phone screen, one student box per option. No change
+to booking rules, actions, prices, database or emails. Checked: lint, type check, builds with accounts on and off; a real hourly
+booking, Copy and Cancel through the new pages on the development database (emails to the local log only); phone and desktop,
+light and dark. Not changed (noticed): after Cancel the earlier "desk is held" line stays until reload (was the same before).
+Local note: Avast's web shield blocks the local server's secure connection to Supabase unless Node uses the Windows certificate
+store (`NODE_USE_SYSTEM_CA=1` / `--use-system-ca`); the live site is not affected.

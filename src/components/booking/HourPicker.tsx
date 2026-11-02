@@ -85,24 +85,20 @@ export function HourPicker({
     : bookPage.hourly.nothingYet;
 
   return (
-    <form action={formAction} className="mt-4 space-y-4" onKeyDown={(e) => e.key === "Escape" && clear()}>
+    <form action={formAction} className="space-y-4" onKeyDown={(e) => e.key === "Escape" && clear()}>
       <input type="hidden" name="date" value={date} />
       <input type="hidden" name="kind" value="hour" />
       <input type="hidden" name="start" value={sel ? slots[sel.from].start : ""} />
       <input type="hidden" name="hours" value={hours || ""} />
 
-      <p className="text-sm">
-        {bookPage.prices.perHour(formatNaira(standardKobo))}
-        {studentKobo != null && <span className="block">{bookPage.prices.studentPerHour(formatNaira(studentKobo))}</span>}
-      </p>
-
       <fieldset>
-        <legend className="mb-1 text-sm font-semibold">{bookPage.hourly.pickLegend}</legend>
+        <legend className="sr-only">{bookPage.hourly.pickLegend}</legend>
         <p className="mb-3 text-sm opacity-80">{picking ? bookPage.hourly.pickEnd : bookPage.hourly.pickStart(maxHours)}</p>
-        <ul className="grid gap-2 sm:grid-cols-2">
+        <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5">
           {slots.map((s, i) => {
             const selected = !!sel && i >= sel.from && i <= sel.to;
             const ok = enabled(i);
+            const note = !s.open ? bookPage.hourly.passed : s.remaining <= 0 ? bookPage.hourly.full : s.remaining <= 3 ? bookPage.fewLeft(s.remaining) : "";
             return (
               <li key={s.start}>
                 <button
@@ -110,20 +106,17 @@ export function HourPicker({
                   onClick={() => choose(i)}
                   aria-pressed={selected}
                   aria-disabled={!ok}
-                  className={`flex min-h-12 w-full items-center gap-3 rounded-xl border px-3 text-left transition ${
+                  aria-label={`${s.startLabel} to ${s.endLabel}${note ? `, ${note}` : ""}`}
+                  className={`flex min-h-14 w-full flex-col items-center justify-center rounded-xl border px-1 text-center transition ${
                     selected
                       ? "border-navy bg-navy text-white dark:border-dark-green dark:bg-dark-green dark:text-dark-bg"
                       : ok
-                        ? "border-slate-navy/25 hover:bg-navy/10 dark:border-white/25 dark:hover:bg-white/10"
-                        : "cursor-not-allowed border-slate-navy/10 opacity-50 dark:border-white/10"
+                        ? "border-slate-navy/25 bg-white hover:border-navy hover:bg-navy/5 dark:border-white/25 dark:bg-transparent dark:hover:bg-white/10"
+                        : "cursor-not-allowed border-slate-navy/10 opacity-45 dark:border-white/10"
                   }`}
                 >
-                  <span className="flex-1 text-sm font-semibold">
-                    {s.startLabel} to {s.endLabel}
-                  </span>
-                  <span className="text-xs font-semibold opacity-90">
-                    {!s.open ? bookPage.hourly.passed : s.remaining > 0 ? bookPage.hourly.left(s.remaining) : bookPage.hourly.full}
-                  </span>
+                  <span className="text-sm font-semibold">{s.startLabel}</span>
+                  {note && <span className={`text-[11px] font-semibold ${selected ? "" : "text-accent-red dark:text-red-300"}`}>{note}</span>}
                   {!ok && <span className="sr-only">{bookPage.hourly.notAvailableHere}</span>}
                 </button>
               </li>
@@ -132,35 +125,38 @@ export function HourPicker({
         </ul>
       </fieldset>
 
-      <p role="status" aria-live="polite" className="rounded-xl bg-cream p-3 text-sm font-semibold dark:bg-dark-bg">
-        {summary}
-      </p>
-
-      {studentKobo != null && (
-        <label className="flex min-h-11 items-start gap-3">
-          <input type="checkbox" name="student" checked={student} onChange={(e) => setStudent(e.target.checked)} className="mt-1 h-5 w-5 shrink-0 accent-navy" />
-          <span>
-            <span className="block text-sm font-semibold">{bookPage.student.label}</span>
-            <span className="block text-sm opacity-75">{bookPage.student.help}</span>
-          </span>
-        </label>
-      )}
-
-      {result.error && (
-        <p role="alert" className="rounded-xl bg-accent-red/10 p-3 text-sm font-medium text-accent-red dark:text-red-300">
-          {bookErrors[result.error] ?? bookErrors.failed}
+      {/* On a phone this bar stays at the bottom of the screen while the hours are chosen. */}
+      <div className="sticky bottom-0 z-10 -mx-6 space-y-3 border-t border-slate-navy/10 bg-white/95 px-6 pb-4 pt-3 backdrop-blur dark:border-white/10 dark:bg-dark-card/95 sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none sm:dark:bg-transparent">
+        <p role="status" aria-live="polite" className="text-sm font-semibold">
+          {summary}
         </p>
-      )}
 
-      <div className="flex flex-wrap gap-3">
-        <PendingButton className={bookButton} pendingText={common.booking} disabled={!sel}>
-          {bookPage.hourly.submit}
-        </PendingButton>
-        {sel && (
-          <button type="button" onClick={clear} className={bookOutline}>
-            {bookPage.hourly.clear}
-          </button>
+        {studentKobo != null && (
+          <label className="flex min-h-11 items-start gap-3">
+            <input type="checkbox" name="student" checked={student} onChange={(e) => setStudent(e.target.checked)} className="mt-1 h-5 w-5 shrink-0 accent-navy" />
+            <span>
+              <span className="block text-sm font-semibold">{bookPage.student.label}</span>
+              <span className="block text-xs opacity-75 sm:text-sm">{bookPage.student.help}</span>
+            </span>
+          </label>
         )}
+
+        {result.error && (
+          <p role="alert" className="rounded-xl bg-accent-red/10 p-3 text-sm font-medium text-accent-red dark:text-red-300">
+            {bookErrors[result.error] ?? bookErrors.failed}
+          </p>
+        )}
+
+        <div className="flex gap-3">
+          <PendingButton className={`${bookButton} flex-1 sm:flex-none`} pendingText={common.booking} disabled={!sel}>
+            {bookPage.hourly.submit}
+          </PendingButton>
+          {sel && (
+            <button type="button" onClick={clear} className={bookOutline}>
+              {bookPage.hourly.clear}
+            </button>
+          )}
+        </div>
       </div>
     </form>
   );
