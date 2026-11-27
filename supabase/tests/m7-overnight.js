@@ -3,6 +3,7 @@
 // Creates temporary members, Staff and Admin (with real two-step sessions), runs the whole
 // flow through the same database functions the website uses, reports each check, then removes
 // everything it created and restores the settings it touched. Prints no keys or passwords.
+// Needs migrations 0001 to 0017 run on development (section 11 tests the monthly overnight stay).
 const fs = require("fs");
 const crypto = require("crypto");
 const root = process.cwd();
@@ -92,6 +93,8 @@ function walk(dir, out = []) {
     const { data: sp } = await admin.from("spaces").select("id").eq("slug", "overnight").single();
     saved.spaceId = sp.id;
     saved.price = (await admin.from("prices").select("amount_kobo").eq("space_id", sp.id).eq("kind", "night").eq("audience", "standard").single()).data;
+    saved.monthPrice = (await admin.from("prices").select("amount_kobo").eq("space_id", sp.id).eq("kind", "month").eq("audience", "standard").single()).data;
+    await admin.from("prices").update({ amount_kobo: null }).eq("space_id", sp.id).eq("kind", "month").eq("audience", "standard");
 
     await admin.from("spaces").update({ capacity: 2, is_bookable: true }).eq("slug", "overnight");
     await admin.from("settings").update({
@@ -108,7 +111,10 @@ function walk(dir, out = []) {
     const staff = await makeUser("staff", "staff", true);
     const staffNo2fa = await makeUser("staff-no2fa", "staff", false);
     const adm = await makeUser("admin", "admin", true);
-    made.push(A, B, C, D, staff, staffNo2fa, adm);
+    const E = await makeUser("E", "member", false);
+    const F = await makeUser("F", "member", false);
+    const G = await makeUser("G", "member", false);
+    made.push(A, B, C, D, E, F, G, staff, staffNo2fa, adm);
     console.log("Created temporary members, Staff and Admin. Test settings: 2 overnight desks, 3 nights at most, check-in 20:00, check-out 07:00, a fake address and fake house rules.");
 
     const today = lagosToday();
@@ -233,15 +239,104 @@ function walk(dir, out = []) {
     check("8c: after cancelling, the address and rules are no longer given", (afterCancel.data ?? []).length === 0);
 
     // ---------- 8b: prices and public settings
-    const monthPrice = await admin.from("prices").update({ amount_kobo: 100000 }).eq("space_id", saved.spaceId).eq("kind", "month").eq("audience", "standard");
-    check("8d: the overnight monthly desk cannot be given a price", !!monthPrice.error && /not offered/i.test(monthPrice.error.message), monthPrice.error?.message);
+    // 8d / 8e (changed in 0017): the overnight monthly price is now allowed, but stays hidden while it is empty
     const pub = (await anon.rpc("get_public_settings")).data;
-    check("8e: the public settings list no overnight monthly price", !(pub.prices ?? []).some((p) => p.space === "overnight" && p.kind === "month"));
+    check("8d: with no overnight monthly price, the public settings and the booking config show no monthly overnight option", !(pub.prices ?? []).some((p) => p.space === "overnight" && p.kind === "month") && (JSON.parse(cfgText).overnight?.month_price ?? null) === null);
     check("8f: the public settings say overnight requests are open", pub.overnight_open === true, String(pub.overnight_open));
     await admin.from("spaces").update({ is_bookable: false }).eq("slug", "overnight");
     const pubClosed = (await anon.rpc("get_public_settings")).data;
     check("8g: when the overnight desks are not open for booking, the public settings say so", pubClosed.overnight_open === false, String(pubClosed.overnight_open));
     await admin.from("spaces").update({ is_bookable: true }).eq("slug", "overnight");
+
+    // ---------- 11: monthly overnight stay (0017)
+    const m0 = addDays(today, 40);
+    const monthReq = (c, d, age = true) => c.rpc("create_night_month_request", { p_checkin: d, p_age_confirmed: age });
+    const noMonthPrice = await monthReq(E.client, m0);
+    check("11a: with no overnight monthly price set, a monthly request is refused (contact us for pricing)", !!noMonthPrice.error && /contact us for pricing/i.test(noMonthPrice.error.message), noMonthPrice.error?.message);
+
+    const MONTH_KOBO = 6000000;
+    const setByAdmin = await adm.client.rpc("save_prices", { p_prices: [{ space: "overnight", kind: "month", audience: "standard", amount_kobo: MONTH_KOBO }] });
+    check("11b: an Admin can now set the overnight monthly price in Settings", !setByAdmin.error, setByAdmin.error?.message);
+    const setByStaff = await staff.client.rpc("save_prices", { p_prices: [{ space: "overnight", kind: "month", audience: "standard", amount_kobo: 1 }] });
+    check("11b2: Staff cannot set it", !!setByStaff.error);
+    const cfg2 = (await E.client.rpc("get_booking_config")).data?.overnight;
+    const pub2 = (await anon.rpc("get_public_settings")).data;
+    check("11c: once set, the booking config offers 30 nights at that price and the public settings list it", cfg2?.month_price === MONTH_KOBO && cfg2?.month_nights === 30 && (pub2.prices ?? []).some((p) => p.space === "overnight" && p.kind === "month" && p.amount_kobo === MONTH_KOBO));
+
+    const noAgeM = await monthReq(E.client, m0, false);
+    check("11d: a monthly request without the 18 or over tick is refused", !!noAgeM.error && /18 or over/i.test(noAgeM.error.message), noAgeM.error?.message);
+    const pastM = await monthReq(E.client, addDays(today, -1));
+    check("11e: a monthly request that starts in the past is refused", !!pastM.error, pastM.error?.message);
+
+    // nightly stays keep their longest-stay limit (set to 7 here, the site default)
+    await admin.from("settings").update({ overnight_max_nights: 7 }).eq("id", true);
+    const eight = await request(G.client, addDays(today, 100), 8);
+    const seven = await request(G.client, addDays(today, 100), 7);
+    check("11f: a nightly booking of 8 nights is still refused, 7 nights is allowed", !!eight.error && /nights at a time/i.test(eight.error.message) && !seven.error, eight.error?.message || seven.error?.message);
+    if (seven.data) await admin.from("bookings").delete().eq("id", seven.data);
+    const availM = (await E.client.rpc("get_overnight_month_availability", { p_checkin: m0 })).data?.[0];
+    check("11g: the monthly availability check works for 30 nights even though nightly stays stop at 7", availM?.available === true, JSON.stringify(availM));
+
+    const e1 = await monthReq(E.client, m0);
+    const rowE = e1.data ? await row(e1.data) : null;
+    check("11h: a member can request a monthly overnight stay (pending_approval, flagged, the monthly price, 18+ time stored)", !e1.error && rowE?.kind === "night" && rowE?.is_month_stay === true && rowE?.status === "pending_approval" && rowE?.amount_kobo === MONTH_KOBO && !!rowE?.age_confirmed_at, e1.error?.message);
+    const slotsE = e1.data ? await slotCount(e1.data) : 0;
+    check("11i: it is 30 consecutive nights: check-in 20:00 on the first night, check-out 07:00 on the morning after the 30th", !!rowE && slotsE === 30 && hhmm(rowE.starts_at) === "20:00" && lagosOf(rowE.starts_at) === m0 && hhmm(rowE.ends_at) === "07:00" && lagosOf(rowE.ends_at) === addDays(m0, 30), rowE ? `${lagosOf(rowE.starts_at)} to ${lagosOf(rowE.ends_at)}, ${slotsE} desks` : "");
+    const nightlyRow = await request(F.client, addDays(today, 100), 2);
+    const nightlyData = nightlyRow.data ? await row(nightlyRow.data) : null;
+    check("11j: a nightly request is still a normal nightly booking (not flagged, price per night times nights)", !nightlyRow.error && nightlyData?.is_month_stay === false && nightlyData?.amount_kobo === 400000, nightlyRow.error?.message);
+    if (nightlyRow.data) await admin.from("bookings").delete().eq("id", nightlyRow.data);
+
+    const e2 = await monthReq(E.client, addDays(m0, 60));
+    check("11k: a second request while one is waiting is refused", !!e2.error && /waiting for approval/i.test(e2.error.message), e2.error?.message);
+    const f1 = await monthReq(F.client, m0);
+    const g1 = await monthReq(G.client, m0);
+    check("11l: capacity is counted for every one of the 30 nights: the third monthly request is refused", !f1.error && !!g1.error && /no longer available/i.test(g1.error.message), f1.error?.message || g1.error?.message);
+    const leakE = await details(E.client, e1.data);
+    check("11m: while waiting for approval the owner gets no address or rules", (leakE.data ?? []).length === 0);
+
+    // the first night cannot start before the team has approved it
+    const startE = rowE.starts_at;
+    await admin.from("bookings").update({ starts_at: new Date(Date.now() - 3600000).toISOString() }).eq("id", e1.data);
+    const lateAppr = await staff.client.rpc("staff_approve_request", { p_booking: e1.data });
+    check("11n: a monthly request whose first night has already started cannot be approved", !!lateAppr.error && /first night/i.test(lateAppr.error.message), lateAppr.error?.message);
+    await admin.from("bookings").update({ starts_at: startE }).eq("id", e1.data);
+
+    const apprE = await staff.client.rpc("staff_approve_request", { p_booking: e1.data });
+    const rowE2 = await row(e1.data);
+    const payH = (new Date(rowE2.hold_expires_at).getTime() - Date.now()) / 3600000;
+    check("11o: Staff approve it in person; it gets the overnight pay window (24 hours)", !apprE.error && rowE2.status === "pending_payment" && payH > 23.5 && payH <= 24.01, apprE.error?.message || payH.toFixed(2));
+    const earlyDetails = await details(E.client, e1.data);
+    await E.client.rpc("claim_payment", { p_booking: e1.data, p_reference: "t" });
+    const claimedDetails = await details(E.client, e1.data);
+    check("11p: before payment is confirmed the address and rules are not given, even after 'I've paid'", (earlyDetails.data ?? []).length === 0 && (claimedDetails.data ?? []).length === 0);
+    const confE = await staff.client.rpc("staff_confirm_payment", { p_booking: e1.data });
+    const ownE = await details(E.client, e1.data);
+    const otherE = [];
+    for (const [who, c] of [["another member", F.client], ["staff", staff.client], ["signed out", anon]]) if (((await details(c, e1.data)).data ?? []).length) otherE.push(who);
+    check("11q: after payment is confirmed only the owner gets the address and rules", !confE.error && (ownE.data ?? []).length === 1 && ownE.data[0].location === SECRET_LOC && otherE.length === 0, confE.error?.message || otherE.join(", "));
+    const renew = await E.client.rpc("renew_my_pass", { p_booking: e1.data });
+    check("11r: a monthly overnight stay cannot be renewed: staying longer needs a new booking", !!renew.error, renew.error?.message);
+
+    // refunds: full refund up to 48 hours before the first night
+    const cancelE = await E.client.rpc("cancel_my_booking", { p_booking: e1.data });
+    const rowE3 = await row(e1.data);
+    check("11s: cancelling before the cutoff (48 hours before the first night) makes a full refund owed", !cancelE.error && rowE3.status === "cancelled" && rowE3.refund_owed === true, cancelE.error?.message);
+
+    // after the first night has started: no automatic refund, an Admin decides by hand
+    const fId = f1.data;
+    await staff.client.rpc("staff_approve_request", { p_booking: fId });
+    await F.client.rpc("claim_payment", { p_booking: fId, p_reference: "t" });
+    await staff.client.rpc("staff_confirm_payment", { p_booking: fId });
+    check("11t: the second monthly stay was approved, paid and confirmed", (await row(fId)).status === "confirmed");
+    await admin.from("bookings").update({ starts_at: new Date(Date.now() - 86400000).toISOString() }).eq("id", fId);
+    const tooLate = await F.client.rpc("cancel_my_booking", { p_booking: fId });
+    check("11u: once the first night has started the member cannot cancel online (no automatic refund)", !!tooLate.error && /too late to cancel/i.test(tooLate.error.message) && (await row(fId)).status === "confirmed", tooLate.error?.message);
+    const staffCancel = await staff.client.rpc("admin_cancel_pass", { p_booking: fId, p_reason: "test", p_refund_kobo: 1000 });
+    check("11v: Staff cannot decide a refund by hand, only an Admin", !!staffCancel.error, staffCancel.error?.message);
+    const admCancel = await adm.client.rpc("admin_cancel_pass", { p_booking: fId, p_reason: "Left after two weeks", p_refund_kobo: 3000000 });
+    const rowF = await row(fId);
+    check("11w: an Admin can cancel it and choose a partial refund by hand", !admCancel.error && rowF.status === "cancelled" && rowF.refund_amount_kobo === 3000000 && rowF.refund_owed === true, admCancel.error?.message);
 
     // ---------- 9: no ID upload anywhere
     const files = walk("src");
@@ -266,6 +361,7 @@ function walk(dir, out = []) {
     if (saved.settings) await admin.from("settings").update(saved.settings).eq("id", true);
     if (saved.on) await admin.from("spaces").update(saved.on).eq("slug", "overnight");
     if (saved.spaceId && saved.price) await admin.from("prices").update({ amount_kobo: saved.price.amount_kobo }).eq("space_id", saved.spaceId).eq("kind", "night").eq("audience", "standard");
+    if (saved.spaceId && saved.monthPrice) await admin.from("prices").update({ amount_kobo: saved.monthPrice.amount_kobo }).eq("space_id", saved.spaceId).eq("kind", "month").eq("audience", "standard");
     const left = await admin.from("bookings").select("id", { count: "exact", head: true }).in("user_id", ids.length ? ids : ["00000000-0000-0000-0000-000000000000"]);
     console.log(`Cleanup done: test accounts removed, settings, prices and the private address restored. Leftover test bookings: ${left.count ?? 0}`);
     const failed = results.filter((r) => !r).length;

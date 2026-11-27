@@ -43,6 +43,7 @@ type Booking = {
   refund_amount_kobo: number | null;
   cancel_reason: string | null;
   approved_at: string | null;
+  is_month_stay: boolean;
 };
 type Details = { location: string | null; rules: string | null; checkin: string | null; checkout: string | null };
 type Pay = { reference: string; amount_kobo: number; hold_expires_at: string; bank_name: string | null; account_number: string | null; account_name: string | null; note: string | null };
@@ -64,7 +65,7 @@ export default async function Page({
   const supabase = await createClient();
   const { data } = await supabase
     .from("bookings")
-    .select("id, reference, kind, starts_at, ends_at, status, amount_kobo, is_student_price, hold_expires_at, refund_owed, refund_done_at, extended_days, refund_amount_kobo, cancel_reason, approved_at")
+    .select("id, reference, kind, starts_at, ends_at, status, amount_kobo, is_student_price, hold_expires_at, refund_owed, refund_done_at, extended_days, refund_amount_kobo, cancel_reason, approved_at, is_month_stay")
     .eq("id", id)
     .eq("user_id", user.id)
     .maybeSingle();
@@ -88,6 +89,7 @@ export default async function Page({
   }
   const canCancel = status === "pending_payment" || status === "pending_approval" || status === "confirmed";
   const isNight = b.kind === "night";
+  const isMonthStay = isNight && b.is_month_stay;
   const neverApproved = isNight && !b.approved_at;
 
   // The address and house rules: the database returns them only to the owner of a CONFIRMED
@@ -102,11 +104,11 @@ export default async function Page({
   const isPass = b.kind === "month";
   let cutoffHours: number | null = null;
   let renewOpen = false;
-  if (isPass) {
+  if (isPass || isMonthStay) {
     const cfg = await getBookingConfig();
     const c = cfg as { monthly_self_cancel_cutoff_hours?: number; monthly_start_window_days?: number } | null;
     cutoffHours = c?.monthly_self_cancel_cutoff_hours ?? null;
-    if (status === "confirmed" && c?.monthly_start_window_days !== undefined) {
+    if (isPass && status === "confirmed" && c?.monthly_start_window_days !== undefined) {
       const endsOn = lagosDate(new Date(new Date(b.ends_at).getTime() - 60 * 60 * 1000));
       const limit = new Date(`${lagosDate()}T12:00:00Z`);
       limit.setUTCDate(limit.getUTCDate() + c.monthly_start_window_days - 1);
@@ -115,7 +117,7 @@ export default async function Page({
   }
 
   return (
-    <BookingShell active="bookings" heading={bookingPage.heading} text={myBookings.kinds[b.kind] ?? b.kind} notice={notice} staff={needsTwoFactor(profile.role)} wide>
+    <BookingShell active="bookings" heading={bookingPage.heading} text={isMonthStay ? overnightBooking.monthKind : (myBookings.kinds[b.kind] ?? b.kind)} notice={notice} staff={needsTwoFactor(profile.role)} wide>
       {progress && (
         <Panel className="mb-6 px-4 py-5 sm:px-8">
           <ProgressSteps steps={progress.steps} done={progress.done} />
@@ -151,6 +153,12 @@ export default async function Page({
             {b.extended_days > 0 && <p className="font-medium">{passBooking.extended(b.extended_days)}</p>}
             <p>{passBooking.anyDesk}</p>
             {status === "pending_payment" && <p>{passBooking.moved}</p>}
+          </div>
+        )}
+        {isMonthStay && (
+          <div className="mt-3 space-y-1 text-sm opacity-85">
+            <p>{overnightBooking.monthFirstNight}</p>
+            <p>{overnightBooking.monthRefund(cutoffHours ?? 48)}</p>
           </div>
         )}
       </Panel>

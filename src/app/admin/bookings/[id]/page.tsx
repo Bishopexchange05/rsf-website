@@ -9,7 +9,7 @@ import { Panel } from "@/components/Panel";
 import { PendingButton } from "@/components/PendingButton";
 import { myBookings } from "@/content/booking";
 import { passAdminDetail } from "@/content/monthly";
-import { requestsAdmin } from "@/content/overnight";
+import { overnightBooking, requestsAdmin } from "@/content/overnight";
 import { RequestDecision } from "@/components/admin/RequestDecision";
 import { actionErrors, actionNotices, bookingDetail, whatsappMessage } from "@/content/payments";
 import { requireRole } from "@/lib/auth";
@@ -43,6 +43,7 @@ type Booking = {
   refund_amount_kobo: number | null;
   age_confirmed_at: string | null;
   approved_at: string | null;
+  is_month_stay: boolean;
   profiles: One<{ full_name: string; phone: string }>;
   payments: One<{
     customer_reference: string | null;
@@ -73,7 +74,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
   const { data } = await supabase
     .from("bookings")
     .select(
-      "id, reference, kind, starts_at, ends_at, status, amount_kobo, is_student_price, hold_expires_at, cancel_reason, refund_owed, refund_done_at, refund_note, extended_days, refund_amount_kobo, age_confirmed_at, approved_at, profiles(full_name, phone), payments(customer_reference, claimed_at, status, confirmed_at, received_kobo, rejected_reason)",
+      "id, reference, kind, starts_at, ends_at, status, amount_kobo, is_student_price, hold_expires_at, cancel_reason, refund_owed, refund_done_at, refund_note, extended_days, refund_amount_kobo, age_confirmed_at, approved_at, is_month_stay, profiles(full_name, phone), payments(customer_reference, claimed_at, status, confirmed_at, received_kobo, rejected_reason)",
     )
     .eq("id", id)
     .maybeSingle();
@@ -94,7 +95,8 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
   const started = new Date(b.starts_at).getTime() <= Date.now();
   const ended = new Date(b.ends_at).getTime() <= Date.now();
   const isPass = b.kind === "month";
-  const passStarted = isPass && status === "confirmed" && started;
+  const isMonthStay = b.kind === "night" && b.is_month_stay;
+  const passStarted = (isPass || isMonthStay) && status === "confirmed" && started;
   const canCancel = ["pending_payment", "payment_claimed", "confirmed"].includes(status);
 
   const digits = who?.phone.replace(/\D/g, "") ?? "";
@@ -120,7 +122,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
           </div>
           <div className="flex flex-wrap justify-between gap-x-4">
             <dt className="font-semibold">{bookingDetail.type}</dt>
-            <dd>{myBookings.kinds[b.kind] ?? b.kind}</dd>
+            <dd>{isMonthStay ? overnightBooking.monthKind : (myBookings.kinds[b.kind] ?? b.kind)}</dd>
           </div>
           <div className="flex flex-wrap justify-between gap-x-4">
             <dt className="font-semibold">{bookingDetail.when}</dt>
@@ -197,7 +199,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
 
           {status === "payment_claimed" && <PaymentDecision bookingId={b.id} expectedKobo={b.amount_kobo} late={passLateStart(b)} isAdmin={isAdmin} />}
 
-          {status === "confirmed" && started && !isPass && (
+          {status === "confirmed" && started && !isPass && !isMonthStay && (
             <ActionForm action={markNoShowAction} notices={actionNotices} errors={actionErrors} toast lockOnSuccess>
               <input type="hidden" name="booking" value={b.id} />
               <PendingButton className={outline} pendingText={bookingDetail.noShowPending}>

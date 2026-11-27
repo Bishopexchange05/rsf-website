@@ -895,3 +895,26 @@ soft shadow cards, solid navy banner with the leaf-vein mark instead of the grad
 (account heading is the member's name; admin "Today" with the date; "Waiting on you", "Nothing waiting", "Before you book"),
 admin Bookings and "Coming in today" as tables, no decorative ticks or dashed boxes. Test: `supabase/tests/analytics.js` 12/12 on
 development (after the run on dev). Sample figures for the review are on development only and will be removed.
+
+**Monthly overnight stay (27 November 2026), change of design from the client; built on `phase-2`, NOT merged, migration 0017
+NOT yet run anywhere.** The overnight workspace now also has a monthly price, in addition to the nightly rate. Decided by the owner:
+one block of **30 consecutive nights** from a start date the member picks; **no auto-renew** (staying longer is a new booking); all
+overnight safeguards stay (18+ tick, in-person approval and ID check at the office before the first night, still no ID upload, bank
+transfer only with the usual overnight pay window, address and house rules only to a payment-confirmed member); refunds follow the
+monthly desk pass (full refund up to 48 hours before the first night, set by `monthly_self_cancel_cutoff_hours`; after the first night
+no automatic refund, an Admin decides by hand with "cancel with a refund amount"); nightly bookings keep their longest-stay limit
+(`overnight_max_nights`, 7 by default). The monthly price is empty by default; while empty no monthly overnight option is shown anywhere.
+Migration `0017_overnight_monthly_price.sql` (additive; **0016 was already taken by the analytics migration**): drops the 0011 rule
+that refused an overnight monthly price; adds `bookings.is_month_stay` (boolean, default false); `create_night_month_request(date,
+boolean)` and `get_overnight_month_availability(date)` (30 nights fixed in the database); re-states `get_booking_config`,
+`get_public_settings`, `staff_approve_request` (a monthly request whose first night has already started cannot be approved: the first
+night cannot start before approval), `cancel_my_booking` and `admin_cancel_pass` (now also for a confirmed monthly overnight stay).
+Website: Admin, Settings, Prices has "Per month (30 nights in a row)" under Overnight; the overnight booking page offers "By the
+night" / "Monthly (30 nights)" only when a price is set, shows the 30-night range, the no-renewal note, the in-person check and the
+refund rule; the booking page, the request, approval and confirmation emails repeat the refund rule; the public Tech & Space prices
+show an "Overnight, monthly" card only when priced. Wording: `legal-defaults.ts` (Terms, new register entries A3b and C2b, lawyer
+priority High) and `docs/LEGAL-DEFAULTS.md` regenerated; `docs/LEGAL-REVIEW.md` marks the monthly overnight wording **needs lawyer
+review** (a 30-night stay is closer to accommodation than a short stay). Tests: `supabase/tests/m7-overnight.js` section 11 (monthly
+overnight end to end, refusal of a nightly booking over the limit, capacity over 30 nights, first-night rule, refunds) and the old
+"overnight month cannot have a price" checks replaced. Notes: the site has no FAQ page, so there was nothing to update there; the
+overnight pay window default is 24 hours (the 2-hour figure is the normal desk hold, `hold_minutes`).

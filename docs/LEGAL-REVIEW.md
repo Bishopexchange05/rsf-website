@@ -109,7 +109,8 @@ You can cancel an unpaid booking at any time. You can cancel a paid hourly, half
 booking until [24 hours] before it starts, and a monthly pass until [48 hours] before its start date.
 Refunds are made by bank transfer within [number] working days; we will ask you for your account details
 by phone or WhatsApp (not through the website). After a monthly pass has started, there is no automatic
-refund; the team may agree a partial refund. If we have to cancel, you will receive a refund. If you do
+refund; the team may agree a partial refund. A monthly overnight stay follows the same refund rule as a
+monthly pass (see the C6 note above, which needs lawyer review). If we have to cancel, you will receive a refund. If you do
 not arrive, the booking is marked as not attended and [no refund is due].
 
 ### C5. Monthly desk pass
@@ -123,6 +124,15 @@ Overnight desks are only for people aged 18 or over. You must meet our team at t
 your ID in person. We do not collect, scan or store your ID on the website. When your payment is
 confirmed we show you the address and house rules; please keep them private. [House rules, conduct,
 belongings, liability and removal from the premises to be completed by the lawyer.]
+
+**Monthly overnight stay: NEEDS LAWYER REVIEW (High).** An overnight stay can now also be booked as one
+block of 30 nights in a row, at its own monthly price. It needs the same in-person approval and ID check
+as a nightly stay, and the first night cannot start until we have approved it. It does not renew by
+itself. You can cancel up to [48 hours] before the first night for a full refund; after the first night
+has started there is no automatic refund and the team decides by hand. **Please advise:** a 30-night
+stay is closer to accommodation than a short stay. Could it be treated as a licence or tenancy, and does
+that change what we must say, what we may refuse or end, how we remove someone, or the refund wording?
+(Entries A3b and C2b in LEGAL-DEFAULTS.md.)
 
 ### C7. What we keep and for how long
 We keep your account and booking details for 12 months after your last activity and then anonymise them.

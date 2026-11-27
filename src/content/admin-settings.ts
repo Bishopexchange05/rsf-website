@@ -77,6 +77,7 @@ export const pricingPage = {
   rules: [
     "A blank hour, day or month price (and a blank overnight night price) shows Contact us for pricing and cannot be booked online.",
     "A blank half-day price hides that option completely.",
+    "A blank overnight monthly price hides the monthly overnight option completely. Only the nightly option is then offered.",
     "A blank student price means there is no student rate for that option.",
     "A student price can never be higher than the standard price. Students pay by bank transfer like everyone else, and staff check student status in person on arrival.",
     "A student price is used and shown only when the matching standard price is set. With the standard price blank, nobody can book that option online.",
@@ -103,6 +104,7 @@ export const pricingPage = {
       heading: "Overnight workspace",
       rows: [
         { space: "overnight", kind: "night", audience: "standard", label: "Per night" },
+        { space: "overnight", kind: "month", audience: "standard", label: "Per month (30 nights in a row)" },
       ],
     },
   ],
@@ -184,6 +186,8 @@ export const publicInfo = {
   student: "Student price",
   studentNote: "Students pay the student price and show their student ID to our team when they arrive.",
   perNight: "Overnight, per night",
+  perMonthNight: "Overnight, per month",
+  monthNightNote: "A monthly overnight stay is 30 nights in a row from the first night you choose. It does not renew by itself, and it needs the same in-person check as a nightly stay.",
   overnightNote: "Overnight stays are for people 18 or over and are approved in person first.",
   book: { label: "Book a desk", href: "/book" },
   halfDayNote: (split: string) => `Half day: morning until ${split}, or afternoon from ${split}.`,
@@ -194,6 +198,7 @@ export const publicInfo = {
     day: { label: "Full day", unit: "per day" },
     month: { label: "Monthly pass", unit: (days: number) => `for ${days} days` },
     night: { label: "Overnight", unit: "per night" },
+    nightMonth: { label: "Overnight, monthly", unit: "for 30 nights" },
   },
   studentTag: (price: string) => `Students ${price}`,
   comingSoon: "Price coming soon",

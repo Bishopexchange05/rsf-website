@@ -34,6 +34,7 @@ export async function PublicWorkspaceInfo() {
 
   const c = publicInfo.cards;
   const halfDay = price("day", "half_day", "standard");
+  const nightMonth = price("overnight", "month", "standard");
   const cards: { key: string; label: string; unit: string; value: number | null; student: number | null }[] = [
     { key: "hour", label: c.hour.label, unit: c.hour.unit, value: price("day", "hour", "standard"), student: student("hour") },
     // Half day appears only when it has a price; otherwise the option does not exist.
@@ -41,6 +42,8 @@ export async function PublicWorkspaceInfo() {
     { key: "day", label: c.day.label, unit: c.day.unit, value: price("day", "day", "standard"), student: student("day") },
     { key: "month", label: c.month.label, unit: c.month.unit(info.monthly_pass_days), value: price("day", "month", "standard"), student: student("month") },
     { key: "night", label: c.night.label, unit: c.night.unit, value: price("overnight", "night", "standard"), student: null },
+    // The monthly overnight stay appears only when an Admin has set its price.
+    ...(nightMonth !== null ? [{ key: "night_month", label: c.nightMonth.label, unit: c.nightMonth.unit, value: nightMonth, student: null }] : []),
   ];
 
   const todayNo = lagosWeekday();
@@ -50,6 +53,7 @@ export async function PublicWorkspaceInfo() {
     publicInfo.monthNote(info.monthly_pass_days),
     ...(cards.some((x) => x.student !== null) ? [publicInfo.studentNote] : []),
     publicInfo.overnightNote,
+    ...(nightMonth !== null ? [publicInfo.monthNightNote] : []),
   ];
 
   return (

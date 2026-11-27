@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import type { ActionResult } from "@/lib/action-result";
 import { requireUser } from "@/lib/auth";
 import { sendLoggedEmail } from "@/lib/email/log";
+import { monthCutoffHours } from "@/lib/booking-open";
 import { bookingWhen, dateTimeLabel, isIsoDate } from "@/lib/lagos";
 import { limited } from "@/lib/rate-limit-db";
 import { formatNaira, parseIntIn, parseTime } from "@/lib/settings-validation";
@@ -200,7 +201,28 @@ export async function requestOvernightAction(fd: FormData): Promise<ActionResult
     p_age_confirmed: text(fd, "age") === "on",
   });
   if (error || typeof data !== "string") return problem(error ? errorCode(error) : "failed");
-  const id = data as string;
+  return afterOvernightRequest(session, data as string, false);
+}
+
+// Request a monthly overnight stay: 30 nights in a row from the chosen first night. The length is
+// fixed in the database; nothing the browser sends can change it.
+export async function requestOvernightMonthAction(fd: FormData): Promise<ActionResult> {
+  const session = await requireUser();
+  const checkin = text(fd, "checkin");
+  if (!isIsoDate(checkin)) return problem("invalid");
+  if (await limited(`night:${session.user.id}`, 10, HOUR)) return problem("too-many");
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("create_night_month_request", {
+    p_checkin: checkin,
+    p_age_confirmed: text(fd, "age") === "on",
+  });
+  if (error || typeof data !== "string") return problem(error ? errorCode(error) : "failed");
+  return afterOvernightRequest(session, data as string, true);
+}
+
+async function afterOvernightRequest(session: Awaited<ReturnType<typeof requireUser>>, id: string, isMonth: boolean): Promise<ActionResult> {
+  const supabase = await createClient();
 
   // Tell the member how to come and meet us, and tell the team. A failed email never stops the request.
   const { data: b } = await supabase
@@ -226,7 +248,7 @@ export async function requestOvernightAction(fd: FormData): Promise<ActionResult
             site.whatsapp,
             hours || "Please message us on WhatsApp to arrange a time.",
             `${origin}/account/bookings/${id}`,
-          ),
+          ) + (isMonth ? overnightEmails.monthNote(await monthCutoffHours()) : ""),
         },
         { template: "overnight-requested", userId: session.user.id },
       );

@@ -68,6 +68,13 @@ Phase 2 covers:
   gateway.
 - Never commit secrets or `.env.local`. The website must never collect or store
   ID documents.
+- Overnight workspace pricing (client decision, 27 November 2026): it has a nightly price AND an
+  optional monthly price (one block of 30 consecutive nights, no auto-renew). The monthly option
+  exists only while an Admin has set its price. It keeps every overnight safeguard (18+, in-person
+  approval and ID check before the first night, no ID upload, bank transfer, address and house rules
+  only after payment is confirmed) and refunds like the monthly desk pass (full refund up to 48 hours
+  before the first night, then an Admin decides by hand). Nightly bookings keep the 7-night maximum.
+  Wording needs lawyer review (see `docs/LEGAL-REVIEW.md`). Migration `0017` adds it.
 
 **Booking go-live is the owner's decision.** The launch conditions (verified email domain, lawyer review done,
 production Supabase in use) are an **advisory checklist** shown as warnings on the Admin Settings page. They

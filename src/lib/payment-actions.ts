@@ -5,6 +5,7 @@ import type { ActionResult } from "@/lib/action-result";
 import { requireRole, requireUser } from "@/lib/auth";
 import { sendLoggedEmail } from "@/lib/email/log";
 import { bookingWhen, dateTimeLabel, timeLabel } from "@/lib/lagos";
+import { monthCutoffHours } from "@/lib/booking-open";
 import { limited } from "@/lib/rate-limit-db";
 import { formatNaira, nairaToKobo } from "@/lib/settings-validation";
 import { getSiteOrigin } from "@/lib/site-origin";
@@ -81,13 +82,14 @@ type BookingRow = {
   status: string;
   cancel_reason: string | null;
   refund_owed: boolean;
+  is_month_stay?: boolean;
 };
 
 async function loadBooking(id: string): Promise<BookingRow | null> {
   const supabase = await createClient();
   const { data } = await supabase
     .from("bookings")
-    .select("id, reference, kind, user_id, starts_at, ends_at, amount_kobo, hold_expires_at, is_student_price, status, cancel_reason, refund_owed")
+    .select("id, reference, kind, user_id, starts_at, ends_at, amount_kobo, hold_expires_at, is_student_price, status, cancel_reason, refund_owed, is_month_stay")
     .eq("id", id)
     .maybeSingle();
   return (data as BookingRow | null) ?? null;
@@ -195,6 +197,7 @@ export async function confirmPaymentAction(fd: FormData): Promise<ActionResult> 
         overnightNote = "";
       }
     }
+    if (b.kind === "night" && b.is_month_stay) overnightNote += overnightEmails.monthNote(await monthCutoffHours());
     if (c.email) {
       await sendLoggedEmail(
         {
@@ -365,7 +368,7 @@ export async function approveRequestAction(fd: FormData): Promise<ActionResult> 
     const origin = await getSiteOrigin();
     if (c.email) {
       await sendLoggedEmail(
-        { to: c.email, subject: overnightEmails.approved.subject(b.reference), text: overnightEmails.approved.body(c.name, b.reference, whenLabel(b), formatNaira(b.amount_kobo), b.hold_expires_at ? dateTimeLabel(b.hold_expires_at) : "the time shown on your booking page", `${origin}/account/bookings/${id}`) },
+        { to: c.email, subject: overnightEmails.approved.subject(b.reference), text: overnightEmails.approved.body(c.name, b.reference, whenLabel(b), formatNaira(b.amount_kobo), b.hold_expires_at ? dateTimeLabel(b.hold_expires_at) : "the time shown on your booking page", `${origin}/account/bookings/${id}`) + (b.is_month_stay ? overnightEmails.monthNote(await monthCutoffHours()) : "") },
         { template: "overnight-approved", userId: b.user_id ?? undefined },
       );
     }

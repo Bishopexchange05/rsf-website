@@ -20,6 +20,22 @@ export const overnight = {
       "Once your payment is confirmed, we show you the address and house rules in your account and by email.",
     ],
   },
+  plans: {
+    label: "Length of stay",
+    nights: "By the night",
+    month: "Monthly (30 nights)",
+  },
+  month: {
+    heading: "Monthly overnight stay",
+    text: "One block of 30 nights in a row, from the first night you choose. It does not renew by itself. If you want to stay longer, you make a new request.",
+    price: (total: string) => `${total} for the 30 nights.`,
+    runs: (range: string) => `Your stay: ${range}.`,
+    firstNight: "The first night cannot start until our team has approved your request. We meet you at the office first, and check your ID there, in person, exactly as for a stay by the night.",
+    refund: (hours: number) => `Refunds: you can cancel online up to ${hours} hours before the first night and get a full refund. After the first night has started there is no automatic refund. Our team decides by hand.`,
+    submit: "Send my monthly request",
+    available: "A desk is free on all 30 nights.",
+    full: (date: string) => `There is no free desk on ${date}. Please choose another start date.`,
+  },
   checkinLabel: "First night (check-in date)",
   nightsLabel: "Number of nights",
   check: "Check these nights",
@@ -50,6 +66,9 @@ export const overnight = {
 
 export const overnightBooking = {
   kind: "Overnight",
+  monthKind: "Monthly overnight stay",
+  monthRefund: (hours: number) => `Cancel online up to ${hours} hours before the first night for a full refund. After the first night has started there is no automatic refund, and our team decides by hand. This stay does not renew by itself.`,
+  monthFirstNight: "Your first night cannot start until our team has approved your request.",
   nights: (n: number) => `${n} night${n === 1 ? "" : "s"}`,
   checkin: "Check-in",
   checkout: "Check-out",
@@ -156,6 +175,13 @@ export const overnightEmails = {
     body: (name: string, ref: string, reason: string, contactUrl: string) =>
       `Hello ${name},\n\nWe could not approve your overnight request ${ref}.\n\nReason: ${reason}\n\nYour desks have been released. If you think this is a mistake, please contact us:\n${contactUrl}\n\nRafael Support Foundation`,
   },
+  // Added to the "requested" and "approved" emails of a monthly overnight stay.
+  monthNote: (hours: number) =>
+    `
+This is a monthly overnight stay: 30 nights in a row. It does not renew by itself. Your first night cannot start until we have approved your request, after meeting you at the office and checking your ID in person.
+
+Refunds: you can cancel online up to ${hours} hours before the first night for a full refund. After the first night has started there is no automatic refund, and our team decides by hand.
+`,
   // Added to the "booking confirmed" email of an overnight booking, only after payment is confirmed.
   confirmedDetails: (location: string, rules: string, checkin: string, checkout: string) =>
     `Your address and house rules\n\nAddress: ${location || "We will share it with you in person."}\n${rules ? `\nHouse rules:\n${rules}\n` : ""}\nCheck-in ${checkin}. Check-out ${checkout}.\n\nPlease keep this to yourself.`,

@@ -7,9 +7,10 @@ import { BookingShell, bookButton, bookInput } from "@/components/booking/Bookin
 import { Panel } from "@/components/Panel";
 import { PendingButton } from "@/components/PendingButton";
 import { errors as bookErrors } from "@/content/booking";
+import { cn } from "@/lib/cn";
 import { overnight, overnightErrors } from "@/content/overnight";
 import { needsTwoFactor, requireUser } from "@/lib/auth";
-import { requestOvernightAction } from "@/lib/booking-actions";
+import { requestOvernightAction, requestOvernightMonthAction } from "@/lib/booking-actions";
 import { addDays, dayLabel, isIsoDate, lagosDate, timeLabel } from "@/lib/lagos";
 import { getBookingConfig } from "@/lib/booking-open";
 import { noIndex } from "@/lib/no-index";
@@ -22,13 +23,14 @@ export const metadata: Metadata = { title: overnight.title, ...noIndex };
 type Config = {
   booking_enabled: boolean;
   advance_booking_days: number;
-  overnight: { enabled: boolean; max_nights?: number; night_price?: number | null; checkin?: string; checkout?: string; request_expiry_days?: number };
+  monthly_self_cancel_cutoff_hours?: number;
+  overnight: { enabled: boolean; max_nights?: number; night_price?: number | null; month_price?: number | null; month_nights?: number; checkin?: string; checkout?: string; request_expiry_days?: number };
 };
 type Availability = { available: boolean; reason: string | null; full_night: string | null };
 
 const clock = (hhmm: string) => timeLabel(`2000-01-01T${hhmm}:00+01:00`);
 
-export default async function Page({ searchParams }: { searchParams: Promise<{ checkin?: string; nights?: string }> }) {
+export default async function Page({ searchParams }: { searchParams: Promise<{ checkin?: string; nights?: string; plan?: string }> }) {
   if (!accountsEnabled) notFound();
   const { profile } = await requireUser();
   const staff = needsTwoFactor(profile.role);
@@ -59,15 +61,21 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ c
   const today = lagosDate();
   const maxDate = addDays(today, config.advance_booking_days);
   const maxNights = on.max_nights ?? 1;
-  const { checkin: checkinParam, nights: nightsParam } = await searchParams;
+  const { checkin: checkinParam, nights: nightsParam, plan: planParam } = await searchParams;
+  // The monthly option exists only while an Admin has set a monthly overnight price.
+  const monthPrice = on.month_price ?? null;
+  const monthNights = on.month_nights ?? 30;
+  const isMonth = planParam === "month" && monthPrice !== null;
   const checkin = checkinParam && isIsoDate(checkinParam) && checkinParam >= today && checkinParam <= maxDate ? checkinParam : addDays(today, 1);
   const nights = parseIntIn(nightsParam ?? "1", 1, maxNights) ?? 1;
 
-  const { data: a } = await supabase.rpc("get_overnight_availability", { p_checkin: checkin, p_nights: nights });
+  const { data: a } = isMonth
+    ? await supabase.rpc("get_overnight_month_availability", { p_checkin: checkin })
+    : await supabase.rpc("get_overnight_availability", { p_checkin: checkin, p_nights: nights });
   const avail = ((a as Availability[] | null) ?? [])[0] ?? null;
   const price = on.night_price ?? null;
 
-  const lastNight = addDays(checkin, nights);
+  const lastNight = addDays(checkin, isMonth ? monthNights : nights);
   const range = `${dayLabel(`${checkin}T12:00:00+01:00`)}, check-in ${clock(on.checkin ?? "00:00")}, to ${dayLabel(`${lastNight}T12:00:00+01:00`)}, check-out ${clock(on.checkout ?? "00:00")}`;
 
   return (
@@ -81,6 +89,70 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ c
         </ol>
       </Panel>
 
+      {monthPrice !== null && (
+        <nav aria-label={overnight.plans.label} className="mb-4 flex flex-wrap gap-2">
+          {[
+            { key: "nights", label: overnight.plans.nights, href: "/book/overnight", on: !isMonth },
+            { key: "month", label: overnight.plans.month, href: "/book/overnight?plan=month", on: isMonth },
+          ].map((p) => (
+            <Link
+              key={p.key}
+              href={p.href}
+              aria-current={p.on ? "page" : undefined}
+              className={cn(
+                "inline-flex min-h-11 items-center rounded-lg border px-4 text-sm font-semibold",
+                p.on ? "border-navy bg-navy text-white" : "border-slate-navy/20 hover:bg-cream dark:border-white/20 dark:hover:bg-dark-card",
+              )}
+            >
+              {p.label}
+            </Link>
+          ))}
+        </nav>
+      )}
+
+      {isMonth && monthPrice !== null ? (
+        <Panel>
+          <h2 className="text-h3">{overnight.month.heading}</h2>
+          <p className="mt-2 text-sm opacity-85">{overnight.month.text}</p>
+          <Form action="/book/overnight" className="mt-4 flex flex-wrap items-end gap-3">
+            <input type="hidden" name="plan" value="month" />
+            <div>
+              <label htmlFor="checkin" className="mb-1.5 block text-sm font-semibold">
+                {overnight.checkinLabel}
+              </label>
+              <input id="checkin" name="checkin" type="date" min={today} max={maxDate} defaultValue={checkin} className={bookInput} />
+            </div>
+            <PendingButton className={bookButton}>{overnight.check}</PendingButton>
+          </Form>
+          <p className="mt-2 text-sm opacity-85">{overnight.times(clock(on.checkin ?? "00:00"), clock(on.checkout ?? "00:00"))}</p>
+          <p className="mt-4 font-semibold">{overnight.month.runs(range)}</p>
+          <p className="mt-1">{overnight.month.price(formatNaira(monthPrice))}</p>
+          <p className="mt-3 text-sm">{overnight.month.firstNight}</p>
+          <p className="mt-2 text-sm">{overnight.month.refund(config.monthly_self_cancel_cutoff_hours ?? 48)}</p>
+
+          {avail?.available ? (
+            <ActionForm action={requestOvernightMonthAction} errors={errors} className="mt-4 space-y-4">
+              <input type="hidden" name="checkin" value={checkin} />
+              <p className="font-medium">{overnight.month.available}</p>
+              <label className="flex min-h-11 items-start gap-3">
+                <input type="checkbox" name="age" className="mt-1 h-5 w-5 shrink-0 accent-navy" />
+                <span>
+                  <span className="block text-sm font-semibold">{overnight.age.label}</span>
+                  <span className="block text-sm opacity-75">{overnight.age.help}</span>
+                </span>
+              </label>
+              <p className="text-sm opacity-85">{overnight.expiryNote(on.request_expiry_days ?? 3)}</p>
+              <PendingButton pendingText="Sending…" className={bookButton}>
+                {overnight.month.submit}
+              </PendingButton>
+            </ActionForm>
+          ) : (
+            <p className="mt-4 font-semibold">
+              {avail?.reason === "full" && avail.full_night ? overnight.month.full(dayLabel(`${avail.full_night}T12:00:00+01:00`)) : avail?.reason === "closed" ? overnight.closed : overnight.outside}
+            </p>
+          )}
+        </Panel>
+      ) : (
       <Panel>
         <Form action="/book/overnight" className="flex flex-wrap items-end gap-3">
           <div>
@@ -136,6 +208,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ c
           )
         )}
       </Panel>
+      )}
 
       <p className="mt-6 text-sm">
         <Link href={overnight.back.href} className="inline-flex min-h-11 items-center font-medium underline underline-offset-2">
